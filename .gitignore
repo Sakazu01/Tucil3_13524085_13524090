@@ -1,0 +1,11 @@
+bin/*.exe
+bin/*.out
+bin/*.txt
+
+*.exe
+*.out
+*.test
+*.log
+
+.DS_Store
+Thumbs.db
