@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"tucil3/src/solver"
@@ -14,7 +15,11 @@ func main() {
 
 	// 1. Input file
 	fmt.Print("Masukan file input: ")
-	filePath := readLine(reader)
+	filePath, err := resolveInputPath(readLine(reader))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error:", err)
+		os.Exit(1)
+	}
 
 	puzzle, err := solver.LoadPuzzleFromFile(filePath)
 	if err != nil {
@@ -108,6 +113,27 @@ func main() {
 func readLine(reader *bufio.Reader) string {
 	line, _ := reader.ReadString('\n')
 	return strings.TrimSpace(line)
+}
+
+func resolveInputPath(input string) (string, error) {
+	candidates := []string{input}
+	if !strings.ContainsAny(input, `/\`) {
+		candidates = append(candidates,
+			filepath.Join("test", input),
+			filepath.Join("..", "test", input),
+		)
+	}
+
+	for _, candidate := range candidates {
+		if candidate == "" {
+			continue
+		}
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate, nil
+		}
+	}
+
+	return "", fmt.Errorf("file input tidak ditemukan: %q", input)
 }
 
 func parseAlgorithm(s string) (solver.Algorithm, bool) {
