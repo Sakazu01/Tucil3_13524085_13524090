@@ -1,4 +1,4 @@
-package backend
+package solver
 
 import (
 	"fmt"
@@ -46,7 +46,7 @@ func (p *Puzzle) CostAt(pos Position) int {
 }
 
 func (p *Puzzle) IsWalkableToken(token string) bool {
-	return token != TileWall && token != TileHole
+	return token != TileWall && token != TileLava
 }
 
 func (p *Puzzle) IsGoalState(state State) bool {
@@ -106,7 +106,7 @@ func (p *Puzzle) Slide(state State, direction string) (SlideResult, bool, error)
 			}, true, nil
 		}
 
-		if token == TileHole {
+		if token == TileLava {
 			return SlideResult{}, false, nil
 		}
 

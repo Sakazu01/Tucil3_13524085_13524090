@@ -1,4 +1,4 @@
-package backend
+package solver
 
 import (
 	"bufio"
@@ -12,11 +12,12 @@ const (
 	TileStart = "Z"
 	TileGoal  = "O"
 	TileWall  = "X"
-	TileHole  = "L"
-	TileFloor = "."
+	TileLava  = "L"
+	TileFloor = "*"
 )
 
 var floorTokens = map[string]struct{}{
+	"*": {},
 	".": {},
 	"-": {},
 	"_": {},
@@ -277,7 +278,7 @@ func parseCostLine(line string, cols int) ([]int, error) {
 
 func isAllowedBoardToken(token string) bool {
 	switch token {
-	case TileStart, TileGoal, TileWall, TileHole:
+	case TileStart, TileGoal, TileWall, TileLava:
 		return true
 	}
 

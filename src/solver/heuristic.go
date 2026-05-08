@@ -1,4 +1,4 @@
-package backend
+package solver
 
 import (
 	"container/heap"
