@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"tucil3/src/algorithm"
-	"tucil3/src/engine"
+	"tucil3/src/backend/algorithm"
+	"tucil3/src/backend/engine"
 )
 
 func RenderBoard(puzzle *engine.Puzzle, state engine.State, pathSet map[engine.Position]bool) string {

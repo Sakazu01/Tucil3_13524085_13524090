@@ -3,10 +3,10 @@ package algorithm
 import (
 	"time"
 
-	"tucil3/src/engine"
+	"tucil3/src/backend/engine"
 )
 
-func AStar(puzzle *engine.Puzzle, heuristic HeuristicFunc) (*SolveResult, error) {
+func GBFS(puzzle *engine.Puzzle, heuristic HeuristicFunc) (*SolveResult, error) {
 	start := time.Now()
 	initialState := puzzle.InitialState()
 
@@ -49,7 +49,6 @@ func AStar(puzzle *engine.Puzzle, heuristic HeuristicFunc) (*SolveResult, error)
 				continue
 			}
 
-			nextG := current.GCost + slide.PathCost
 			nextH, err := heuristic(puzzle, slide.NextState)
 			if err != nil {
 				return nil, err
@@ -57,8 +56,8 @@ func AStar(puzzle *engine.Puzzle, heuristic HeuristicFunc) (*SolveResult, error)
 
 			frontier.Push(&SearchNode{
 				State:  slide.NextState,
-				GCost:  nextG,
-				FCost:  nextG + nextH,
+				GCost:  current.GCost + slide.PathCost,
+				FCost:  nextH,
 				Moves:  appendMove(current.Moves, dir),
 				Slides: appendSlide(current.Slides, slide),
 			})

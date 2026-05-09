@@ -6,8 +6,8 @@ import (
 	"os"
 	"strings"
 
-	"tucil3/src/algorithm"
-	"tucil3/src/engine"
+	"tucil3/src/backend/algorithm"
+	"tucil3/src/backend/engine"
 )
 
 func SaveSolution(puzzle *engine.Puzzle, result *algorithm.SolveResult, algoName, heuristicName, path string) error {

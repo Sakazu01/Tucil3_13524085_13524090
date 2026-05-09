@@ -3,7 +3,7 @@ package algorithm
 import (
 	"time"
 
-	"tucil3/src/engine"
+	"tucil3/src/backend/engine"
 )
 
 func BFS(puzzle *engine.Puzzle) (*SolveResult, error) {

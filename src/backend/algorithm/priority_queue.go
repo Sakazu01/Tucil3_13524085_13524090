@@ -1,6 +1,6 @@
 package algorithm
 
-import "tucil3/src/engine"
+import "tucil3/src/backend/engine"
 
 type SearchNode struct {
 	State  engine.State

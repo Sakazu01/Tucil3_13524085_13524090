@@ -3,23 +3,18 @@ package algorithm
 import (
 	"time"
 
-	"tucil3/src/engine"
+	"tucil3/src/backend/engine"
 )
 
-func GBFS(puzzle *engine.Puzzle, heuristic HeuristicFunc) (*SolveResult, error) {
+func UCS(puzzle *engine.Puzzle) (*SolveResult, error) {
 	start := time.Now()
 	initialState := puzzle.InitialState()
-
-	h0, err := heuristic(puzzle, initialState)
-	if err != nil {
-		return nil, err
-	}
 
 	frontier := &MinHeap{}
 	frontier.Push(&SearchNode{
 		State:  initialState,
 		GCost:  0,
-		FCost:  h0,
+		FCost:  0,
 		Moves:  []string{},
 		Slides: []engine.SlideResult{},
 	})
@@ -49,15 +44,11 @@ func GBFS(puzzle *engine.Puzzle, heuristic HeuristicFunc) (*SolveResult, error) 
 				continue
 			}
 
-			nextH, err := heuristic(puzzle, slide.NextState)
-			if err != nil {
-				return nil, err
-			}
-
+			nextG := current.GCost + slide.PathCost
 			frontier.Push(&SearchNode{
 				State:  slide.NextState,
-				GCost:  current.GCost + slide.PathCost,
-				FCost:  nextH,
+				GCost:  nextG,
+				FCost:  nextG,
 				Moves:  appendMove(current.Moves, dir),
 				Slides: appendSlide(current.Slides, slide),
 			})
