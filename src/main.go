@@ -6,17 +6,18 @@ import (
 	"os"
 	"strings"
 
-	"tucil3/src/solver"
+	"tucil3/src/algorithm"
+	"tucil3/src/engine"
+	"tucil3/src/utils"
 )
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
 
-	// 1. Input file
 	fmt.Print("Masukan file input: ")
 	filePath := readLine(reader)
 
-	puzzle, err := solver.LoadPuzzleFromFile(filePath)
+	puzzle, err := engine.LoadPuzzleFromFile(filePath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
 		os.Exit(1)
@@ -24,23 +25,21 @@ func main() {
 
 	fmt.Printf("Puzzle dimuat: %d x %d, %d checkpoint\n\n", puzzle.Rows, puzzle.Cols, puzzle.CheckpointCount())
 	fmt.Println("Board Awal:")
-	fmt.Print(renderBoard(puzzle, puzzle.InitialState(), nil))
+	fmt.Print(utils.RenderBoard(puzzle, puzzle.InitialState(), nil))
 	fmt.Println()
 
-	// 2. Pilih algoritma
-	fmt.Print("Algoritma apa yang anda pilih? (UCS/GBFS/A*): ")
+	fmt.Print("Algoritma apa yang anda pilih? (UCS/BFS/GBFS/A*/IDA*): ")
 	algoStr := strings.ToUpper(readLine(reader))
 
-	algorithm, ok := parseAlgorithm(algoStr)
+	algo, ok := parseAlgorithm(algoStr)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "Algoritma tidak valid: %q\n", algoStr)
 		os.Exit(1)
 	}
 
-	// 3. Pilih heuristik (tidak diperlukan untuk UCS)
-	var heuristic solver.HeuristicFunc
+	var heuristic algorithm.HeuristicFunc
 	heuristicName := ""
-	if algorithm != solver.AlgorithmUCS {
+	if algorithm.AlgorithmRequiresHeuristic(algo) {
 		fmt.Print("Heuristic apa yang anda pilih? (H1/H2/H3): ")
 		hStr := strings.ToUpper(readLine(reader))
 
@@ -51,7 +50,6 @@ func main() {
 		}
 	}
 
-	// 4. Jalankan solver
 	fmt.Println()
 	if heuristicName != "" {
 		fmt.Printf("Mencari solusi dengan %s + %s...\n", algoStr, heuristicName)
@@ -59,43 +57,44 @@ func main() {
 		fmt.Printf("Mencari solusi dengan %s...\n", algoStr)
 	}
 
-	result, err := solver.Solve(puzzle, algorithm, heuristic)
+	result, err := algorithm.Solve(puzzle, algo, heuristic)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error saat solving:", err)
 		os.Exit(1)
 	}
 
-	// 5. Tampilkan hasil
 	fmt.Println()
 	if !result.Found {
 		fmt.Println("Tidak ada solusi yang ditemukan.")
-	} else {
-		fmt.Printf("Solusi Yang Ditemukan : %s\n", strings.Join(result.Moves, ""))
-		fmt.Printf("Cost dari Solusi      : %d\n", result.TotalCost)
-	}
-	fmt.Printf("Waktu eksekusi        : %d ms\n", result.Duration.Milliseconds())
-	fmt.Printf("Banyak iterasi        : %d iterasi\n", result.Iterations)
-
-	if !result.Found {
+		fmt.Printf("Waktu eksekusi        : %d ms\n", result.Duration.Milliseconds())
+		fmt.Printf("Banyak iterasi        : %d iterasi\n", result.Iterations)
 		return
 	}
 
-	// Tampilkan semua langkah solusi
-	fmt.Println()
-	printSolutionSteps(puzzle, result)
+	fmt.Printf("Solusi Yang Ditemukan : %s\n", strings.Join(result.Moves, ""))
+	fmt.Printf("Cost dari Solusi      : %d\n", result.TotalCost)
 
-	// 6. Tawaran playback
+	fmt.Println()
+	utils.PrintSolutionSteps(puzzle, result)
+
+	fmt.Printf("Waktu eksekusi        : %d ms\n", result.Duration.Milliseconds())
+	fmt.Printf("Banyak iterasi        : %d iterasi\n", result.Iterations)
+
 	fmt.Print("\nApakah Anda ingin melakukan playback? (Ya/Tidak): ")
 	if strings.EqualFold(readLine(reader), "ya") {
-		playback(puzzle, result, reader)
+		fmt.Printf("Pada step berapa anda ingin melakukan playback (0-%d): ", len(result.Slides))
+		startStep := 0
+		if _, err := fmt.Sscanf(readLine(reader), "%d", &startStep); err != nil || startStep < 0 || startStep > len(result.Slides) {
+			startStep = 0
+		}
+		playback(puzzle, result, reader, startStep)
 	}
 
-	// 7. Tawaran simpan ke file
 	fmt.Print("Apakah Anda ingin menyimpan solusi? (Ya/Tidak): ")
 	if strings.EqualFold(readLine(reader), "ya") {
 		fmt.Print("Masukan path file output: ")
 		outPath := readLine(reader)
-		if err := saveSolution(puzzle, result, algoStr, heuristicName, outPath); err != nil {
+		if err := utils.SaveSolution(puzzle, result, algoStr, heuristicName, outPath); err != nil {
 			fmt.Fprintln(os.Stderr, "Gagal menyimpan:", err)
 		} else {
 			fmt.Printf("Solusi disimpan pada %s\n", outPath)
@@ -103,101 +102,42 @@ func main() {
 	}
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
 func readLine(reader *bufio.Reader) string {
 	line, _ := reader.ReadString('\n')
 	return strings.TrimSpace(line)
 }
 
-func parseAlgorithm(s string) (solver.Algorithm, bool) {
+func parseAlgorithm(s string) (algorithm.Algorithm, bool) {
 	switch s {
 	case "UCS":
-		return solver.AlgorithmUCS, true
+		return algorithm.AlgorithmUCS, true
+	case "BFS":
+		return algorithm.AlgorithmBFS, true
 	case "GBFS":
-		return solver.AlgorithmGBFS, true
+		return algorithm.AlgorithmGBFS, true
 	case "A*", "ASTAR", "A-STAR":
-		return solver.AlgorithmAStar, true
+		return algorithm.AlgorithmAStar, true
+	case "IDA*", "IDASTAR", "IDA-STAR":
+		return algorithm.AlgorithmIDAStar, true
 	}
 	return 0, false
 }
 
-func parseHeuristic(s string) (solver.HeuristicFunc, string, bool) {
+func parseHeuristic(s string) (algorithm.HeuristicFunc, string, bool) {
 	switch s {
 	case "H1":
-		return solver.HeuristicManhattan, "H1 (Manhattan)", true
+		return algorithm.HeuristicManhattan, "H1 (Manhattan)", true
 	case "H2":
-		return solver.HeuristicMinimumSlide, "H2 (Minimum Slide)", true
+		return algorithm.HeuristicMinimumSlide, "H2 (Minimum Slide)", true
 	case "H3":
-		return solver.HeuristicDjikstra, "H3 (Dijkstra)", true
+		return algorithm.HeuristicDjikstra, "H3 (Dijkstra)", true
 	}
 	return nil, "", false
 }
 
-// ─── Render ─────────────────────────────────────────────────────────────────
-
-// renderBoard merender papan puzzle sebagai string grid.
-// pathSet berisi posisi lintasan slide yang ditandai '~'.
-// Aktor ditampilkan sebagai '@', checkpoint yang sudah dikumpulkan sebagai '*'.
-func renderBoard(puzzle *solver.Puzzle, state solver.State, pathSet map[solver.Position]bool) string {
-	collectedSet := map[solver.Position]bool{}
-	for i := 0; i < state.NextCheckpoint && i < len(puzzle.CheckpointOrder); i++ {
-		collectedSet[puzzle.CheckpointOrder[i]] = true
-	}
-
-	var sb strings.Builder
-	for row := 0; row < puzzle.Rows; row++ {
-		for col := 0; col < puzzle.Cols; col++ {
-			if col > 0 {
-				sb.WriteByte(' ')
-			}
-			pos := solver.Position{Row: row, Col: col}
-			switch {
-			case pos == state.Actor:
-				sb.WriteString("@")
-			case pathSet[pos]:
-				sb.WriteString("~")
-			case collectedSet[pos]:
-				sb.WriteString(solver.TileFloor)
-			default:
-				sb.WriteString(puzzle.Board[row][col])
-			}
-		}
-		sb.WriteByte('\n')
-	}
-	return sb.String()
-}
-
-// buildPathSet membuat set posisi lintasan slide tanpa posisi berhenti.
-func buildPathSet(slide solver.SlideResult) map[solver.Position]bool {
-	set := map[solver.Position]bool{}
-	for _, p := range slide.Path {
-		if p != slide.To {
-			set[p] = true
-		}
-	}
-	return set
-}
-
-// ─── Output ─────────────────────────────────────────────────────────────────
-
-func printSolutionSteps(puzzle *solver.Puzzle, result *solver.SolveResult) {
-	fmt.Println("─── Langkah-langkah Solusi ───")
-	fmt.Println("State Awal:")
-	fmt.Print(renderBoard(puzzle, puzzle.InitialState(), nil))
-
-	for i, slide := range result.Slides {
-		fmt.Printf("\nLangkah %d: Geser %s  (dari %v ke %v, cost: %d)\n",
-			i+1, slide.Direction, slide.From, slide.To, slide.PathCost)
-		fmt.Print(renderBoard(puzzle, slide.NextState, buildPathSet(slide)))
-	}
-}
-
-// ─── Playback ───────────────────────────────────────────────────────────────
-
-func playback(puzzle *solver.Puzzle, result *solver.SolveResult, reader *bufio.Reader) {
+func playback(puzzle *engine.Puzzle, result *algorithm.SolveResult, reader *bufio.Reader, startStep int) {
 	states := buildStates(puzzle, result)
-	step := 0
+	step := startStep
 	total := len(result.Slides)
 
 	for {
@@ -206,12 +146,12 @@ func playback(puzzle *solver.Puzzle, result *solver.SolveResult, reader *bufio.R
 
 		if step == 0 {
 			fmt.Println("State Awal:")
-			fmt.Print(renderBoard(puzzle, puzzle.InitialState(), nil))
+			fmt.Print(utils.RenderBoard(puzzle, puzzle.InitialState(), nil))
 		} else {
 			slide := result.Slides[step-1]
 			fmt.Printf("Langkah %d: Geser %s  (dari %v ke %v, cost: %d)\n",
 				step, slide.Direction, slide.From, slide.To, slide.PathCost)
-			fmt.Print(renderBoard(puzzle, states[step], buildPathSet(slide)))
+			fmt.Print(utils.RenderBoard(puzzle, states[step], utils.BuildPathSet(slide)))
 		}
 
 		if step == total {
@@ -233,7 +173,6 @@ func playback(puzzle *solver.Puzzle, result *solver.SolveResult, reader *bufio.R
 		case input == "q":
 			return
 		default:
-			// Coba parse sebagai nomor langkah
 			var n int
 			if _, err := fmt.Sscanf(input, "%d", &n); err == nil && n >= 0 && n <= total {
 				step = n
@@ -242,8 +181,8 @@ func playback(puzzle *solver.Puzzle, result *solver.SolveResult, reader *bufio.R
 	}
 }
 
-func buildStates(puzzle *solver.Puzzle, result *solver.SolveResult) []solver.State {
-	states := make([]solver.State, len(result.Slides)+1)
+func buildStates(puzzle *engine.Puzzle, result *algorithm.SolveResult) []engine.State {
+	states := make([]engine.State, len(result.Slides)+1)
 	states[0] = puzzle.InitialState()
 	for i, slide := range result.Slides {
 		states[i+1] = slide.NextState
@@ -253,37 +192,4 @@ func buildStates(puzzle *solver.Puzzle, result *solver.SolveResult) []solver.Sta
 
 func clearScreen() {
 	fmt.Print("\033[H\033[2J")
-}
-
-// ─── Save ────────────────────────────────────────────────────────────────────
-
-func saveSolution(puzzle *solver.Puzzle, result *solver.SolveResult, algoName, heuristicName, path string) error {
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	w := bufio.NewWriter(f)
-
-	if heuristicName != "" {
-		fmt.Fprintf(w, "Algoritma   : %s dengan %s\n", algoName, heuristicName)
-	} else {
-		fmt.Fprintf(w, "Algoritma   : %s\n", algoName)
-	}
-	fmt.Fprintf(w, "Solusi      : %s\n", strings.Join(result.Moves, ""))
-	fmt.Fprintf(w, "Cost        : %d\n", result.TotalCost)
-	fmt.Fprintf(w, "Iterasi     : %d\n", result.Iterations)
-	fmt.Fprintf(w, "Waktu       : %d ms\n\n", result.Duration.Milliseconds())
-
-	fmt.Fprintln(w, "State Awal:")
-	fmt.Fprint(w, renderBoard(puzzle, puzzle.InitialState(), nil))
-
-	for i, slide := range result.Slides {
-		fmt.Fprintf(w, "\nLangkah %d: Geser %s  (dari %v ke %v, cost: %d)\n",
-			i+1, slide.Direction, slide.From, slide.To, slide.PathCost)
-		fmt.Fprint(w, renderBoard(puzzle, slide.NextState, buildPathSet(slide)))
-	}
-
-	return w.Flush()
 }

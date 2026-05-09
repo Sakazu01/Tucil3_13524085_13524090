@@ -1,35 +1,37 @@
-package solver
+package algorithm
 
 import (
 	"container/heap"
 	"fmt"
+
+	"tucil3/src/engine"
 )
 
 var heuristicDirections = []string{"U", "D", "L", "R"}
 
 const unreachableHeuristic = int(^uint(0) >> 2)
 
-var heuristicDjikstraCache = map[*Puzzle]map[State]int{}
+var heuristicDjikstraCache = map[*engine.Puzzle]map[engine.State]int{}
 
-func HeuristicManhattan(puzzle *Puzzle, state State) (int, error) {
+func HeuristicManhattan(puzzle *engine.Puzzle, state engine.State) (int, error) {
 	if err := validateHeuristicInput(puzzle, state); err != nil {
 		return 0, err
 	}
 
 	current := state.Actor
-	totalDistance := 0
+	total := 0
 
 	for idx := state.NextCheckpoint; idx < puzzle.CheckpointCount(); idx++ {
 		target := puzzle.CheckpointOrder[idx]
-		totalDistance += manhattanDistance(current, target)
+		total += manhattanDistance(current, target)
 		current = target
 	}
 
-	totalDistance += manhattanDistance(current, puzzle.Goal)
-	return totalDistance * puzzle.MinWalkableCost, nil
+	total += manhattanDistance(current, puzzle.Goal)
+	return total * puzzle.MinWalkableCost, nil
 }
 
-func HeuristicMinimumSlide(puzzle *Puzzle, state State) (int, error) {
+func HeuristicMinimumSlide(puzzle *engine.Puzzle, state engine.State) (int, error) {
 	if err := validateHeuristicInput(puzzle, state); err != nil {
 		return 0, err
 	}
@@ -38,14 +40,12 @@ func HeuristicMinimumSlide(puzzle *Puzzle, state State) (int, error) {
 	}
 
 	type bfsNode struct {
-		state State
+		state engine.State
 		depth int
 	}
 
 	queue := []bfsNode{{state: state, depth: 0}}
-	visited := map[State]struct{}{
-		state: {},
-	}
+	visited := map[engine.State]struct{}{state: {}}
 
 	for len(queue) > 0 {
 		current := queue[0]
@@ -70,24 +70,21 @@ func HeuristicMinimumSlide(puzzle *Puzzle, state State) (int, error) {
 			}
 
 			visited[nextState] = struct{}{}
-			queue = append(queue, bfsNode{
-				state: nextState,
-				depth: current.depth + 1,
-			})
+			queue = append(queue, bfsNode{state: nextState, depth: current.depth + 1})
 		}
 	}
 
 	return unreachableHeuristic, nil
 }
 
-func HeuristicDjikstra(puzzle *Puzzle, state State) (int, error) {
+func HeuristicDjikstra(puzzle *engine.Puzzle, state engine.State) (int, error) {
 	if err := validateHeuristicInput(puzzle, state); err != nil {
 		return 0, err
 	}
 
 	cache, exists := heuristicDjikstraCache[puzzle]
 	if !exists {
-		cache = make(map[State]int)
+		cache = make(map[engine.State]int)
 		heuristicDjikstraCache[puzzle] = cache
 	}
 
@@ -99,16 +96,9 @@ func HeuristicDjikstra(puzzle *Puzzle, state State) (int, error) {
 		return 0, nil
 	}
 
-	distances := map[State]int{
-		state: 0,
-	}
+	distances := map[engine.State]int{state: 0}
 
-	pq := &statePriorityQueue{
-		{
-			state: state,
-			cost:  0,
-		},
-	}
+	pq := &statePriorityQueue{{state: state, cost: 0}}
 	heap.Init(pq)
 
 	for pq.Len() > 0 {
@@ -139,10 +129,7 @@ func HeuristicDjikstra(puzzle *Puzzle, state State) (int, error) {
 			}
 
 			distances[result.NextState] = nextCost
-			heap.Push(pq, &statePriorityItem{
-				state: result.NextState,
-				cost:  nextCost,
-			})
+			heap.Push(pq, &statePriorityItem{state: result.NextState, cost: nextCost})
 		}
 	}
 
@@ -150,7 +137,7 @@ func HeuristicDjikstra(puzzle *Puzzle, state State) (int, error) {
 	return unreachableHeuristic, nil
 }
 
-func validateHeuristicInput(puzzle *Puzzle, state State) error {
+func validateHeuristicInput(puzzle *engine.Puzzle, state engine.State) error {
 	if puzzle == nil {
 		return fmt.Errorf("puzzle tidak boleh nil")
 	}
@@ -163,40 +150,34 @@ func validateHeuristicInput(puzzle *Puzzle, state State) error {
 	return nil
 }
 
-func targetSatisfied(puzzle *Puzzle, initial State, current State) bool {
+func targetSatisfied(puzzle *engine.Puzzle, initial, current engine.State) bool {
 	if initial.NextCheckpoint < puzzle.CheckpointCount() {
 		return current.NextCheckpoint > initial.NextCheckpoint
 	}
 	return puzzle.IsGoalState(current)
 }
 
-func manhattanDistance(a, b Position) int {
+func manhattanDistance(a, b engine.Position) int {
 	return abs(a.Row-b.Row) + abs(a.Col-b.Col)
 }
 
-func abs(value int) int {
-	if value < 0 {
-		return -value
+func abs(v int) int {
+	if v < 0 {
+		return -v
 	}
-	return value
+	return v
 }
 
 type statePriorityItem struct {
-	state State
+	state engine.State
 	cost  int
 	index int
 }
 
 type statePriorityQueue []*statePriorityItem
 
-func (pq statePriorityQueue) Len() int {
-	return len(pq)
-}
-
-func (pq statePriorityQueue) Less(i, j int) bool {
-	return pq[i].cost < pq[j].cost
-}
-
+func (pq statePriorityQueue) Len() int            { return len(pq) }
+func (pq statePriorityQueue) Less(i, j int) bool  { return pq[i].cost < pq[j].cost }
 func (pq statePriorityQueue) Swap(i, j int) {
 	pq[i], pq[j] = pq[j], pq[i]
 	pq[i].index = i
@@ -211,10 +192,10 @@ func (pq *statePriorityQueue) Push(item any) {
 
 func (pq *statePriorityQueue) Pop() any {
 	old := *pq
-	lastIndex := len(old) - 1
-	item := old[lastIndex]
-	old[lastIndex] = nil
+	last := len(old) - 1
+	item := old[last]
+	old[last] = nil
 	item.index = -1
-	*pq = old[:lastIndex]
+	*pq = old[:last]
 	return item
 }
