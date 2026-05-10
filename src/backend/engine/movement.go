@@ -36,7 +36,10 @@ func (p *Puzzle) Slide(state State, direction string) (SlideResult, bool, error)
 		next := current.Add(delta)
 
 		if !p.InBounds(next) {
-			return SlideResult{}, false, nil
+			if !moved {
+				return SlideResult{}, false, nil
+			}
+			return p.buildSlideResult(direction, state, current, path, totalCost, passedCheckpoints, nextCheckpoint)
 		}
 
 		token := p.Cell(next)
@@ -52,19 +55,22 @@ func (p *Puzzle) Slide(state State, direction string) (SlideResult, bool, error)
 			return SlideResult{}, false, nil
 		}
 
+		checkpoint, isCheckpoint := parseCheckpointToken(token)
+		if isCheckpoint && checkpoint > nextCheckpoint {
+			if !moved {
+				return SlideResult{}, false, nil
+			}
+			return p.buildSlideResult(direction, state, current, path, totalCost, passedCheckpoints, nextCheckpoint)
+		}
+
 		current = next
 		moved = true
 		path = append(path, current)
 		totalCost += p.CostAt(current)
 
-		checkpoint, isCheckpoint := parseCheckpointToken(token)
-		if isCheckpoint {
-			if checkpoint == nextCheckpoint {
-				passedCheckpoints = append(passedCheckpoints, checkpoint)
-				nextCheckpoint++
-			} else if checkpoint > nextCheckpoint {
-				return SlideResult{}, false, nil
-			}
+		if isCheckpoint && checkpoint == nextCheckpoint {
+			passedCheckpoints = append(passedCheckpoints, checkpoint)
+			nextCheckpoint++
 		}
 	}
 }

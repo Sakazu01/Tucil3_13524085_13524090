@@ -1,0 +1,9 @@
+Testcase  : testcase10.txt
+Algorithm : UCS
+Heuristik : 
+Found     : false
+Moves     : 
+MoveCount : 0
+TotalCost : 0
+Iterations: 14
+Duration  : 0 ms

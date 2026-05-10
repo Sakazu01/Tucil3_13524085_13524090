@@ -504,29 +504,12 @@ function formatPosition(position) {
 }
 
 function saveSolutionAsText() {
-  if (!state.solveResponse?.result) {
+  if (!state.solveResponse?.textOutput) {
     showToast("No solution data to save yet.");
     return;
   }
 
-  const { puzzle, result, frames } = state.solveResponse;
-  const lines = [
-    "Tucil 3 Solver Result",
-    `Algorithm: ${result.algorithm}`,
-    `Heuristic: ${result.heuristic || "Not required"}`,
-    `Found: ${result.found}`,
-    `Moves: ${result.moves || "(none)"}`,
-    `Move Count: ${result.moveCount}`,
-    `Total Cost: ${result.totalCost}`,
-    `Iterations: ${result.iterations}`,
-    `Duration: ${result.durationMs} ms`,
-    `Puzzle Size: ${puzzle.rows} x ${puzzle.cols}`,
-    "",
-    "Frame Summary:",
-    ...frames.map((frame) => `${frame.step}. ${frame.title} | dir=${frame.direction || "-"} | actor=${formatPosition(frame.state.actor)}`),
-  ];
-
-  downloadFile("solution.txt", lines.join("\n"), "text/plain;charset=utf-8");
+  downloadFile("solution.txt", state.solveResponse.textOutput, "text/plain;charset=utf-8");
 }
 
 function downloadFile(filename, content, mimeType) {

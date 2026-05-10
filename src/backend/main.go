@@ -13,13 +13,14 @@ import (
 
 	"tucil3/src/backend/algorithm"
 	"tucil3/src/backend/engine"
+	"tucil3/src/backend/utils"
 )
 
 type solveRequest struct {
-	Testcase  string `json:"testcase"`
+	Testcase   string `json:"testcase"`
 	PuzzleText string `json:"puzzleText"`
-	Algorithm string `json:"algorithm"`
-	Heuristic string `json:"heuristic"`
+	Algorithm  string `json:"algorithm"`
+	Heuristic  string `json:"heuristic"`
 }
 
 type apiError struct {
@@ -38,9 +39,10 @@ type testcaseResponse struct {
 }
 
 type solveResponse struct {
-	Puzzle puzzleDTO `json:"puzzle"`
-	Result resultDTO `json:"result"`
-	Frames []frameDTO `json:"frames"`
+	Puzzle     puzzleDTO  `json:"puzzle"`
+	Result     resultDTO  `json:"result"`
+	Frames     []frameDTO `json:"frames"`
+	TextOutput string     `json:"textOutput"`
 }
 
 type resultDTO struct {
@@ -214,6 +216,14 @@ func handleSolve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	testcaseName := strings.TrimSpace(req.Testcase)
+	if testcaseName == "" {
+		testcaseName = "manual-input"
+	}
+
+	var textBuf strings.Builder
+	_ = utils.BuildSolutionText(&textBuf, puzzle, result, testcaseName, algo.String(), heuristicName)
+
 	response := solveResponse{
 		Puzzle: toPuzzleDTO(puzzle),
 		Result: resultDTO{
@@ -226,7 +236,8 @@ func handleSolve(w http.ResponseWriter, r *http.Request) {
 			Iterations: result.Iterations,
 			DurationMs: result.Duration.Milliseconds(),
 		},
-		Frames: buildFrames(puzzle, result),
+		Frames:     buildFrames(puzzle, result),
+		TextOutput: textBuf.String(),
 	}
 
 	writeJSON(w, http.StatusOK, response)
@@ -369,7 +380,12 @@ func toStateDTO(state engine.State) stateDTO {
 }
 
 func resolveTestDir() (string, error) {
-	return resolveExistingPath("test", filepath.Join("..", "..", "test"))
+	return resolveExistingPath(
+		filepath.Join("test", "input"),
+		"test",
+		filepath.Join("..", "..", "test", "input"),
+		filepath.Join("..", "..", "test"),
+	)
 }
 
 func resolveTestcasePath(name string) (string, error) {

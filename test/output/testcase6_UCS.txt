@@ -1,0 +1,9 @@
+﻿Testcase  : testcase6.txt
+Algorithm : UCS
+Heuristik : 
+Found     : true
+Moves     : URULURDRLDRDLU
+MoveCount : 14
+TotalCost : 217
+Iterations: 93
+Duration  : 0 ms

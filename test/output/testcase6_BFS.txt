@@ -1,0 +1,9 @@
+﻿Testcase  : testcase6.txt
+Algorithm : BFS
+Heuristik : 
+Found     : true
+Moves     : URULURDRDLDLU
+MoveCount : 13
+TotalCost : 218
+Iterations: 89
+Duration  : 0 ms

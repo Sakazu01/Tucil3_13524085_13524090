@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -10,33 +11,32 @@ import (
 	"tucil3/src/backend/engine"
 )
 
-func SaveSolution(puzzle *engine.Puzzle, result *algorithm.SolveResult, algoName, heuristicName, path string) error {
+func BuildSolutionText(w io.Writer, puzzle *engine.Puzzle, result *algorithm.SolveResult, testcaseName, algoName, heuristicName string) error {
+	bw := bufio.NewWriter(w)
+
+	algoLabel := algoName
+	if heuristicName != "" {
+		algoLabel = fmt.Sprintf("%s (%s)", algoName, heuristicName)
+	}
+
+	fmt.Fprintf(bw, "Testcase  : %s\n", testcaseName)
+	fmt.Fprintf(bw, "Algorithm : %s\n", algoLabel)
+	fmt.Fprintf(bw, "Heuristik : %s\n", heuristicName)
+	fmt.Fprintf(bw, "Found     : %v\n", result.Found)
+	fmt.Fprintf(bw, "Moves     : %s\n", strings.Join(result.Moves, ""))
+	fmt.Fprintf(bw, "MoveCount : %d\n", len(result.Moves))
+	fmt.Fprintf(bw, "TotalCost : %d\n", result.TotalCost)
+	fmt.Fprintf(bw, "Iterations: %d\n", result.Iterations)
+	fmt.Fprintf(bw, "Duration  : %d ms\n", result.Duration.Milliseconds())
+
+	return bw.Flush()
+}
+
+func SaveSolution(puzzle *engine.Puzzle, result *algorithm.SolveResult, testcaseName, algoName, heuristicName, path string) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-
-	w := bufio.NewWriter(f)
-
-	if heuristicName != "" {
-		fmt.Fprintf(w, "Algoritma   : %s dengan %s\n", algoName, heuristicName)
-	} else {
-		fmt.Fprintf(w, "Algoritma   : %s\n", algoName)
-	}
-	fmt.Fprintf(w, "Solusi      : %s\n", strings.Join(result.Moves, ""))
-	fmt.Fprintf(w, "Cost        : %d\n", result.TotalCost)
-	fmt.Fprintf(w, "Iterasi     : %d\n", result.Iterations)
-	fmt.Fprintf(w, "Waktu       : %d ms\n\n", result.Duration.Milliseconds())
-
-	fmt.Fprintln(w, "State Awal:")
-	fmt.Fprint(w, RenderBoard(puzzle, puzzle.InitialState(), nil))
-
-	for i, slide := range result.Slides {
-		fmt.Fprintf(w, "\nLangkah %d: Geser %s  (dari %v ke %v, cost: %d)\n",
-			i+1, slide.Direction, slide.From, slide.To, slide.PathCost)
-		fmt.Fprint(w, RenderBoard(puzzle, slide.NextState, BuildPathSet(slide)))
-	}
-
-	return w.Flush()
+	return BuildSolutionText(f, puzzle, result, testcaseName, algoName, heuristicName)
 }
