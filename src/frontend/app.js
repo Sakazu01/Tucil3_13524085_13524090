@@ -22,12 +22,9 @@ const elements = {
   algorithmSelect: document.getElementById("algorithm-select"),
   heuristicSelect: document.getElementById("heuristic-select"),
   runMain: document.getElementById("run-main"),
-  runSidebar: document.getElementById("run-sidebar"),
   refreshLayout: document.getElementById("refresh-layout"),
-  dropzone: document.getElementById("dropzone"),
   fileInput: document.getElementById("file-input"),
   pickFile: document.getElementById("pick-file"),
-  solverTip: document.getElementById("solver-tip"),
   boardGrid: document.getElementById("board-grid"),
   boardCaption: document.getElementById("board-caption"),
   visualizerSubtitle: document.getElementById("visualizer-subtitle"),
@@ -53,7 +50,6 @@ const elements = {
   metricAlgorithm: document.getElementById("metric-algorithm"),
   metricHeuristic: document.getElementById("metric-heuristic"),
   saveSolution: document.getElementById("save-solution"),
-  exportJson: document.getElementById("export-json"),
 };
 
 async function init() {
@@ -82,7 +78,6 @@ function bindEvents() {
 
   elements.algorithmSelect.addEventListener("change", updateHeuristicAvailability);
   elements.runMain.addEventListener("click", runSolver);
-  elements.runSidebar.addEventListener("click", runSolver);
   elements.refreshLayout.addEventListener("click", async () => {
     try {
       await loadTestcases();
@@ -95,28 +90,6 @@ function bindEvents() {
   elements.pickFile.addEventListener("click", () => elements.fileInput.click());
   elements.fileInput.addEventListener("change", handleFileSelection);
 
-  ["dragenter", "dragover"].forEach((eventName) => {
-    elements.dropzone.addEventListener(eventName, (event) => {
-      event.preventDefault();
-      elements.dropzone.classList.add("is-dragover");
-    });
-  });
-
-  ["dragleave", "drop"].forEach((eventName) => {
-    elements.dropzone.addEventListener(eventName, (event) => {
-      event.preventDefault();
-      elements.dropzone.classList.remove("is-dragover");
-    });
-  });
-
-  elements.dropzone.addEventListener("drop", async (event) => {
-    const [file] = Array.from(event.dataTransfer?.files || []);
-    if (!file) {
-      return;
-    }
-    await applyPuzzleFile(file);
-  });
-
   elements.resetFrames.addEventListener("click", () => setCurrentStep(0));
   elements.stepPrev.addEventListener("click", () => setCurrentStep(Math.max(0, state.currentStep - 1)));
   elements.stepNext.addEventListener("click", () => {
@@ -128,7 +101,6 @@ function bindEvents() {
   elements.timeline.addEventListener("input", () => setCurrentStep(Number(elements.timeline.value)));
 
   elements.saveSolution.addEventListener("click", saveSolutionAsText);
-  elements.exportJson.addEventListener("click", exportSolutionAsJson);
 }
 
 async function apiFetch(url, options = {}) {
@@ -215,15 +187,6 @@ function updateHeuristicAvailability() {
   const requiresHeuristic = ["GBFS", "A*", "IDA*"].includes(algorithm);
   elements.heuristicSelect.disabled = !requiresHeuristic;
   elements.heuristicSelect.closest(".field").style.opacity = requiresHeuristic ? "1" : "0.55";
-
-  const tips = {
-    UCS: "UCS guarantees lowest path cost without heuristics, useful for comparing raw weighted search performance.",
-    BFS: "BFS is best for minimum move count comparisons, but it ignores weighted traversal costs.",
-    GBFS: "GBFS can be fast, but it may miss lower-cost routes because it chases the heuristic aggressively.",
-    "A*": "A* usually balances speed and path quality well for this kind of weighted sliding puzzle.",
-    "IDA*": "IDA* trades memory usage for repeated deepening, which can be useful on larger search spaces.",
-  };
-  elements.solverTip.textContent = tips[algorithm] || tips["A*"];
 }
 
 async function handleFileSelection(event) {
@@ -385,9 +348,9 @@ function renderResultState(errorMessage = "") {
   const result = response?.result;
 
   if (!response || !result) {
-    elements.resultStatus.textContent = errorMessage ? "Error" : "Idle";
+    elements.resultStatus.textContent = errorMessage ? "Error" : "Belum jalan";
     elements.resultStatus.className = `status-pill${errorMessage ? " error" : ""}`;
-    elements.resultsSubtitle.textContent = errorMessage || "Run the solver to inspect moves, costs, and timing.";
+    elements.resultsSubtitle.textContent = errorMessage || "Belum dijalankan.";
     elements.solutionPath.textContent = "-";
     elements.metricCost.textContent = "-";
     elements.metricTime.textContent = "-";
@@ -396,15 +359,14 @@ function renderResultState(errorMessage = "") {
     elements.metricAlgorithm.textContent = "-";
     elements.metricHeuristic.textContent = "-";
     elements.saveSolution.disabled = true;
-    elements.exportJson.disabled = true;
     return;
   }
 
-  elements.resultStatus.textContent = result.found ? "Success" : "No Path";
+  elements.resultStatus.textContent = result.found ? "Solusi ditemukan!" : "Tidak ada solusi";
   elements.resultStatus.className = `status-pill${result.found ? " success" : " error"}`;
   elements.resultsSubtitle.textContent = result.found
-    ? "Solution generated from the current solver run."
-    : "The solver completed, but no valid route was found.";
+    ? "Rute ditemukan dari input saat ini."
+    : "Solver selesai, tapi rute valid tidak ditemukan.";
   elements.solutionPath.textContent = result.moves || "(no moves)";
   elements.metricCost.textContent = String(result.totalCost);
   elements.metricTime.textContent = `${result.durationMs} ms`;
@@ -413,7 +375,6 @@ function renderResultState(errorMessage = "") {
   elements.metricAlgorithm.textContent = result.algorithm || "-";
   elements.metricHeuristic.textContent = result.heuristic || "Not required";
   elements.saveSolution.disabled = false;
-  elements.exportJson.disabled = false;
 }
 
 function updatePlaybackControls() {
@@ -472,15 +433,13 @@ function stopPlayback() {
 }
 
 function setBusyState(isBusy) {
-  [elements.runMain, elements.runSidebar].forEach((button) => {
+  [elements.runMain].forEach((button) => {
     button.disabled = isBusy;
   });
   if (isBusy) {
-    elements.runMain.querySelector("span:last-child").textContent = "Running...";
-    elements.runSidebar.querySelector("span:last-child").textContent = "Running...";
+    elements.runMain.querySelector("span:last-child").textContent = "Solving...";
   } else {
-    elements.runMain.querySelector("span:last-child").textContent = "Run Solver";
-    elements.runSidebar.querySelector("span:last-child").textContent = "Run Solver";
+    elements.runMain.querySelector("span:last-child").textContent = "Solve";
   }
 }
 
@@ -552,7 +511,7 @@ function saveSolutionAsText() {
 
   const { puzzle, result, frames } = state.solveResponse;
   const lines = [
-    "SolverPath AI Result",
+    "Tucil 3 Solver Result",
     `Algorithm: ${result.algorithm}`,
     `Heuristic: ${result.heuristic || "Not required"}`,
     `Found: ${result.found}`,
@@ -568,19 +527,6 @@ function saveSolutionAsText() {
   ];
 
   downloadFile("solution.txt", lines.join("\n"), "text/plain;charset=utf-8");
-}
-
-function exportSolutionAsJson() {
-  if (!state.solveResponse) {
-    showToast("No solver response to export yet.");
-    return;
-  }
-
-  downloadFile(
-    "solution.json",
-    JSON.stringify(state.solveResponse, null, 2),
-    "application/json;charset=utf-8",
-  );
 }
 
 function downloadFile(filename, content, mimeType) {

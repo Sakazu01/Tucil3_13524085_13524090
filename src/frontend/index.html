@@ -1,179 +1,217 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SolverPath AI</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark">SolverPath AI</span>
-      <span class="brand-subtitle">Pathfinding Puzzle Solver Dashboard</span>
-    </div>
-    <div class="topbar-actions">
-      <button class="icon-button" type="button" id="refresh-layout" title="Refresh data">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tucil 3</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <button
+        class="icon-button refresh-button"
+        type="button"
+        id="refresh-layout"
+        title="Refresh testcase"
+      >
         <span class="material-symbols-outlined">refresh</span>
       </button>
-      <a class="icon-avatar" href="#results" title="Jump to results">A</a>
-    </div>
-  </header>
+      <h1>Ice Sliding Puzzle Solver</h1>
+    </header>
 
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="sidebar-heading">
-        <h1>Pathfinding Solver</h1>
-        <p>Academic Edition v2.4</p>
-      </div>
+    <main class="solver-shell" id="workspace">
+      <aside class="input-panel">
+        <div class="panel-header">
+          <h2>INPUT</h2>
+        </div>
 
-      <nav class="sidebar-nav">
-        <a class="nav-item nav-item-active" href="#workspace">
-          <span class="material-symbols-outlined">dashboard</span>
-          <span>Dashboard</span>
-        </a>
-        <a class="nav-item" href="#visualizer">
-          <span class="material-symbols-outlined">visibility</span>
-          <span>Visualizer</span>
-        </a>
-        <a class="nav-item" href="#results">
-          <span class="material-symbols-outlined">analytics</span>
-          <span>Results</span>
-        </a>
-      </nav>
-
-      <button class="primary-button sidebar-run" type="button" id="run-sidebar">
-        <span class="material-symbols-outlined">play_arrow</span>
-        <span>Run Solver</span>
-      </button>
-    </aside>
-
-    <main class="workspace" id="workspace">
-      <section class="left-column">
-        <article class="card">
-          <div class="section-kicker">Workspace</div>
-          <div class="card-header-block">
-            <h2>Configuration</h2>
-            <p>Choose a testcase or paste your own puzzle, then run the solver.</p>
-          </div>
-
+        <div class="panel-body">
           <div class="source-toggle" role="tablist" aria-label="Input source">
-            <button class="toggle-chip is-active" type="button" data-source-mode="testcase">Testcase Library</button>
-            <button class="toggle-chip" type="button" data-source-mode="manual">Manual Input</button>
+            <button
+              class="toggle-chip is-active"
+              type="button"
+              data-source-mode="testcase"
+            >
+              Testcase
+            </button>
+            <button class="toggle-chip" type="button" data-source-mode="manual">
+              Manual
+            </button>
           </div>
 
           <section class="source-panel" id="panel-testcase">
             <div class="field">
-              <label for="testcase-select">Available Testcases</label>
+              <label for="testcase-select">Testcase file</label>
               <div class="inline-control">
                 <select id="testcase-select"></select>
-                <button class="ghost-button" type="button" id="load-testcase">Load</button>
+                <button
+                  class="ghost-button compact-button"
+                  type="button"
+                  id="load-testcase"
+                >
+                  Load
+                </button>
               </div>
             </div>
 
             <div class="field">
-              <label for="testcase-preview">Loaded Content</label>
-              <textarea id="testcase-preview" rows="9" readonly></textarea>
+              <label for="testcase-preview">Grid text</label>
+              <textarea id="testcase-preview" rows="10" readonly></textarea>
             </div>
           </section>
 
           <section class="source-panel hidden" id="panel-manual">
             <div class="field">
-              <label>Input Puzzle (.txt)</label>
-              <div class="dropzone" id="dropzone">
-                <span class="material-symbols-outlined">upload_file</span>
-                <strong>Drag and drop file here</strong>
-                <p>or choose a local `.txt` puzzle file</p>
-                <input id="file-input" type="file" accept=".txt,text/plain" hidden>
-                <button class="ghost-button" type="button" id="pick-file">Choose File</button>
+              <label>Upload grid file</label>
+              <div class="file-row">
+                <button
+                  class="ghost-button compact-button"
+                  type="button"
+                  id="pick-file"
+                >
+                  Choose file
+                </button>
+                <span class="file-hint">.txt</span>
+                <input
+                  id="file-input"
+                  type="file"
+                  accept=".txt,text/plain"
+                  hidden
+                />
               </div>
             </div>
 
             <div class="field">
-              <label for="manual-input">Puzzle Text</label>
-              <textarea id="manual-input" rows="12" placeholder="5 5&#10;X X X X X&#10;X Z . O X&#10;X . . . X&#10;X . . . X&#10;X X X X X&#10;0 0 0 0 0&#10;0 1 1 1 0&#10;0 1 1 1 0&#10;0 1 1 1 0&#10;0 0 0 0 0"></textarea>
+              <label for="manual-input">Grid text</label>
+              <textarea
+                id="manual-input"
+                rows="10"
+                placeholder="5 5&#10;X X X X X&#10;X Z . O X&#10;X . . . X&#10;X . . . X&#10;X X X X X&#10;0 0 0 0 0&#10;0 1 1 1 0&#10;0 1 1 1 0&#10;0 1 1 1 0&#10;0 0 0 0 0"
+              ></textarea>
             </div>
           </section>
 
-          <div class="field-grid">
-            <div class="field">
-              <label for="algorithm-select">Search Algorithm</label>
-              <select id="algorithm-select">
-                <option value="UCS">UCS (Uniform Cost Search)</option>
-                <option value="BFS">BFS (Breadth-First Search)</option>
-                <option value="GBFS">GBFS (Greedy Best-First Search)</option>
-                <option value="A*" selected>A* (A-Star Search)</option>
-                <option value="IDA*">IDA* (Iterative Deepening A*)</option>
-              </select>
-            </div>
+          <div class="field">
+            <label for="algorithm-select">Search algorithm</label>
+            <select id="algorithm-select">
+              <option value="UCS">UCS</option>
+              <option value="BFS">BFS</option>
+              <option value="GBFS">GBFS</option>
+              <option value="A*" selected>A*</option>
+              <option value="IDA*">IDA*</option>
+            </select>
+          </div>
 
-            <div class="field">
-              <label for="heuristic-select">Heuristic Function</label>
-              <select id="heuristic-select">
-                <option value="H1">H1 - Manhattan Distance</option>
-                <option value="H2" selected>H2 - Minimum Slide Estimate</option>
-                <option value="H3">H3 - Dijkstra Estimate</option>
-              </select>
-            </div>
+          <div class="field">
+            <label for="heuristic-select">Heuristic function</label>
+            <select id="heuristic-select">
+              <option value="H1">H1 Manhattan</option>
+              <option value="H2" selected>H2 Minimum slide</option>
+              <option value="H3">H3 Dijkstra</option>
+            </select>
           </div>
 
           <button class="primary-button run-button" type="button" id="run-main">
-            <span class="material-symbols-outlined">bolt</span>
-            <span>Run Solver</span>
+            <span class="material-symbols-outlined">play_arrow</span>
+            <span>Solve</span>
           </button>
-        </article>
 
-        <article class="card info-card">
-          <div class="info-icon">
-            <span class="material-symbols-outlined">info</span>
-          </div>
-          <div>
-            <h3>Solver Tip</h3>
-            <p id="solver-tip">
-              Heuristic-based search usually converges faster on larger boards, while UCS and BFS are helpful for comparing uninformed strategies.
-            </p>
-          </div>
-        </article>
-
-      </section>
-
-      <section class="right-column">
-        <article class="card visualizer-card" id="visualizer">
-          <div class="card-header">
-            <div class="card-title-row">
-              <span class="material-symbols-outlined card-icon">visibility</span>
+          <section class="result-summary" id="results">
+            <div class="result-line">
+              <span>Path</span>
+              <strong class="code-inline" id="solution-path">-</strong>
+            </div>
+            <div class="result-grid">
               <div>
-                <h2>Visualizer</h2>
-                <p id="visualizer-subtitle">Load a puzzle to preview the board.</p>
+                <span>Total Cost</span>
+                <strong id="metric-cost">-</strong>
+              </div>
+              <div>
+                <span>Time</span>
+                <strong id="metric-time">-</strong>
+              </div>
+              <div>
+                <span>Iteration</span>
+                <strong id="metric-iter">-</strong>
+              </div>
+              <div>
+                <span>Moves</span>
+                <strong id="metric-moves">-</strong>
               </div>
             </div>
-            <div class="card-actions">
-              <button class="icon-button" type="button" id="reset-frames" title="Reset playback">
-                <span class="material-symbols-outlined">replay</span>
-              </button>
+            <p class="result-note" id="results-subtitle">Belum dijalankan.</p>
+            <div class="result-meta">
+              <span id="metric-algorithm">-</span>
+              <span id="metric-heuristic">-</span>
             </div>
+          </section>
+        </div>
+      </aside>
+
+      <section class="output-panel" id="visualizer">
+        <div class="panel-header output-header">
+          <h2>BOARD OUTPUT</h2>
+          <span class="status-pill" id="result-status">Idle</span>
+        </div>
+
+        <div class="output-body">
+          <div class="visualizer-caption-row">
+            <span id="visualizer-subtitle"
+              >Muat puzzle untuk melihat board.</span
+            >
+            <button
+              class="icon-button"
+              type="button"
+              id="reset-frames"
+              title="Reset playback"
+            >
+              <span class="material-symbols-outlined">replay</span>
+            </button>
           </div>
 
           <div class="visualizer-stage">
             <div class="board-shell">
               <div class="board-grid" id="board-grid" aria-live="polite"></div>
             </div>
-            <p class="board-caption" id="board-caption">Waiting for puzzle data.</p>
+            <p class="board-caption" id="board-caption">Belum ada puzzle.</p>
           </div>
 
           <div class="playback-panel">
             <div class="playback-controls">
-              <button class="icon-button playback-button" type="button" id="step-prev" title="Previous step">
+              <button
+                class="icon-button playback-button"
+                type="button"
+                id="step-prev"
+                title="Previous step"
+              >
                 <span class="material-symbols-outlined">skip_previous</span>
               </button>
-              <button class="play-button" type="button" id="play-toggle">
-                <span class="material-symbols-outlined" id="play-icon">play_arrow</span>
+              <button
+                class="play-button"
+                type="button"
+                id="play-toggle"
+                title="Play"
+              >
+                <span class="material-symbols-outlined" id="play-icon"
+                  >play_arrow</span
+                >
               </button>
-              <button class="icon-button playback-button" type="button" id="step-next" title="Next step">
+              <button
+                class="icon-button playback-button"
+                type="button"
+                id="step-next"
+                title="Next step"
+              >
                 <span class="material-symbols-outlined">skip_next</span>
               </button>
             </div>
@@ -181,103 +219,51 @@
             <div class="step-status">
               <span class="step-label" id="step-label">STEP 0 / 0</span>
               <label class="goto-wrapper" for="goto-step">
-                <span>Go to</span>
-                <input id="goto-step" type="number" min="0" value="0">
+                <span>Ke</span>
+                <input id="goto-step" type="number" min="0" value="0" />
               </label>
             </div>
 
             <div class="timeline-shell">
-              <input id="timeline" type="range" min="0" max="0" value="0">
+              <input id="timeline" type="range" min="0" max="0" value="0" />
             </div>
           </div>
 
           <div class="frame-grid">
             <div class="frame-box">
-              <span class="meta-label">Direction</span>
+              <span>Direction</span>
               <strong id="frame-direction">-</strong>
             </div>
             <div class="frame-box">
-              <span class="meta-label">Slide Cost</span>
+              <span>Cost</span>
               <strong id="frame-cost">-</strong>
             </div>
             <div class="frame-box">
-              <span class="meta-label">Actor</span>
+              <span>Current Position</span>
               <strong id="frame-actor">-</strong>
             </div>
             <div class="frame-box">
-              <span class="meta-label">Checkpoints</span>
+              <span>Checkpoint</span>
               <strong id="frame-checkpoints">-</strong>
             </div>
           </div>
-        </article>
 
-        <article class="card" id="results">
-          <div class="card-header">
-            <div class="card-title-row">
-              <span class="material-symbols-outlined card-icon tertiary">task_alt</span>
-              <div>
-                <h2>Solver Results</h2>
-                <p id="results-subtitle">Run the solver to inspect moves, costs, and timing.</p>
-              </div>
-            </div>
-            <span class="status-pill" id="result-status">Idle</span>
-          </div>
-
-          <div class="results-grid">
-            <div>
-              <label class="meta-label" for="solution-path">Solution Path</label>
-              <div class="code-box" id="solution-path">-</div>
-            </div>
-
-            <div class="metrics-grid">
-              <div class="metric-box">
-                <span class="meta-label">Cost</span>
-                <strong id="metric-cost">-</strong>
-              </div>
-              <div class="metric-box">
-                <span class="meta-label">Time</span>
-                <strong id="metric-time">-</strong>
-              </div>
-              <div class="metric-box">
-                <span class="meta-label">Iter</span>
-                <strong id="metric-iter">-</strong>
-              </div>
-              <div class="metric-box">
-                <span class="meta-label">Moves</span>
-                <strong id="metric-moves">-</strong>
-              </div>
-            </div>
-          </div>
-
-          <div class="secondary-metrics">
-            <div class="frame-box wide-box">
-              <span class="meta-label">Algorithm</span>
-              <strong id="metric-algorithm">-</strong>
-            </div>
-            <div class="frame-box wide-box">
-              <span class="meta-label">Heuristic</span>
-              <strong id="metric-heuristic">-</strong>
-            </div>
-          </div>
-
-          <div class="result-actions">
-            <button class="ghost-button action-wide" type="button" id="save-solution">
+          <div class="output-actions">
+            <button
+              class="ghost-button action-wide"
+              type="button"
+              id="save-solution"
+            >
               <span class="material-symbols-outlined">save</span>
-              <span>Save Solution</span>
-            </button>
-            <button class="ghost-button action-wide" type="button" id="export-json">
-              <span class="material-symbols-outlined">share</span>
-              <span>Export Data</span>
+              <span>Download TXT</span>
             </button>
           </div>
-        </article>
-
+        </div>
       </section>
     </main>
-  </div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="./app.js" defer></script>
-</body>
+    <script src="./app.js" defer></script>
+  </body>
 </html>
