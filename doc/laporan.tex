@@ -1,0 +1,614 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage[space]{grffile}
+\usepackage{tabularx}
+
+% Translasi penamaan default LaTeX ke Bahasa Indonesia
+\renewcommand{\figurename}{Gambar}
+\renewcommand{\tablename}{Tabel}
+
+% Konfigurasi warna tautan (hyperlinks)
+\hypersetup{
+    colorlinks=true, 
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black
+}
+
+% Pengaturan jarak paragraf dan pencegah teks menabrak margin kanan
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+\emergencystretch=2em 
+
+% Memperbaiki ruang penomoran di Daftar Isi agar tidak nabrak
+\setlength{\cftsecnumwidth}{4.5em}
+\setlength{\cftsubsecnumwidth}{2.5em}
+
+% Format Penomoran Bab dan Subbab
+\renewcommand{\thesection}{BAB \Roman{section}}
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}
+\renewcommand{\thesubsubsection}{\arabic{section}.\arabic{subsection}.\arabic{subsubsection}}
+
+% Konfigurasi format judul
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection:}{0.5em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0.5em}{}
+
+% Konfigurasi listings untuk potongan kode
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    rulecolor=\color{gray!40},
+    xleftmargin=1em,
+    xrightmargin=1em,
+    breaklines=true
+}
+
+% Makro kustom untuk memuat gambar asli
+\newcommand{\screenshotfig}[2]{%
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{#1}
+    \caption{#2}
+  \end{figure}
+}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+\begin{document}
+
+% ================= COVER =================
+\begin{titlepage}
+\thispagestyle{empty}
+\centering
+
+\vspace*{2em}
+{\Large\bfseries LAPORAN TUGAS KECIL 3\par}
+\vspace{0.5em}
+{\large\textsc{IF2211 Strategi Algoritma}\par}
+{\normalsize\scshape Semester II Tahun 2025/2026\par}
+
+\vspace{3em}
+
+% Pastikan file cover.png tersedia di folder yang sama
+\includegraphics[width=0.45\textwidth]{cover.png}\\
+
+\vspace{2.5em}
+{\Large \textbf{Penyelesaian \textit{Ice Sliding Puzzle} \\ Menggunakan Algoritma \textit{Pathfinding}}\par}
+\vspace{3em}
+
+{\large
+Disusun Oleh:\\[0.8em]
+\begin{tabular}{ll}
+13524085 & Ariel Cornelius Sitorus \\
+13524090 & Nashiruddin Akram \\
+\end{tabular}
+\par}
+
+\vfill
+{\large
+\textsc{Program Studi Teknik Informatika}\\
+\textsc{Sekolah Teknik Elektro dan Informatika}\\
+\textsc{Institut Teknologi Bandung}\\[0.3em]
+\normalsize Mei 2026\par}
+\end{titlepage}
+
+% ================= DAFTAR ISI =================
+\clearpage
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+\pagenumbering{arabic}
+
+% ================= BAB I =================
+\section{PENDAHULUAN}
+
+\subsection{Latar Belakang}
+Permasalahan pencarian rute (\textit{pathfinding}) merupakan salah satu topik fundamental dalam bidang kecerdasan buatan dan strategi algoritma. Dalam konteks pengembangan permainan video, \textit{pathfinding} sering dimodifikasi dengan berbagai aturan fisika maupun logika lingkungan. Salah satu contoh penerapannya adalah pada \textit{Ice Sliding Puzzle}, di mana entitas yang bergerak tidak dapat berhenti secara bebas di setiap koordinat, melainkan akan terus meluncur hingga menabrak objek penghalang. Mekanika ini mengubah topologi graf ruang status (\textit{state space}) dari pencarian rute tradisional, sehingga memerlukan penyesuaian dalam pembangkitan simpul (\textit{node generation}) dan perhitungan biaya lintasan. 
+
+\subsection{Deskripsi Tugas/Permasalahan}
+Tugas ini menuntut penyelesaian permainan \textit{Ice Sliding Puzzle} pada matriks berukuran $N \times M$. Aktor memulai pergerakan dari koordinat \texttt{Z} (awal) dan harus mencapai titik \texttt{O} (tujuan). Papan terdiri dari lantai biasa dengan bobot lintasan yang berbeda-beda, dinding penghalang (\texttt{X}), bahaya mematikan (\texttt{L} / Lava), serta titik pemeriksaan angka (\textit{checkpoint}).
+
+Aktor dapat bergerak ke empat arah kardinal. Saat bergerak, aktor terus meluncur tanpa henti hingga menabrak dinding, batas luar peta, atau \textit{checkpoint} yang belum saatnya dikunjungi (berlaku sebagai dinding). Gerakan dinyatakan ilegal apabila aktor melintasi lava, tidak bergerak dari posisi awal, atau mengakhiri luncuran di titik tujuan sebelum seluruh \textit{checkpoint} dikumpulkan secara berurutan.
+
+\subsection{Tujuan}
+Tujuan dari pengerjaan tugas ini adalah:
+\begin{enumerate}[noitemsep]
+    \item Memodelkan \textit{Ice Sliding Puzzle} ke dalam representasi ruang status yang valid.
+    \item Mengimplementasikan algoritma pencarian rute berinformasi (A*, GBFS) maupun tidak berinformasi (UCS, BFS, IDA*).
+    \item Merancang dan menganalisis fungsi heuristik untuk mengevaluasi efisiensi pencarian rute optimal.
+\end{enumerate}
+
+% ================= BAB II =================
+\section{TEORI DASAR}
+
+\subsection{Konsep \textit{Pathfinding}}
+Pencarian rute (\textit{route/path planning}) adalah proses algoritmik untuk menemukan lintasan dari satu simpul awal ke simpul tujuan dalam sebuah graf ruang status. Lintasan dikatakan optimal jika memiliki akumulasi bobot (biaya) paling minimum. Dalam kasus ruang status yang besar, pencarian rute dikendalikan melalui ekspansi simpul secara sistematis untuk mencegah iterasi yang berulang (siklus) dan memastikan program terminasi \cite{Munir1}.
+
+\subsection{Algoritma A* (\textit{A-Star}) / UCS / BFS}
+\begin{itemize}[noitemsep]
+    \item \textbf{\textit{Uniform Cost Search} (UCS):} Merupakan perluasan dari algoritma Dijkstra. UCS mengekspansi simpul berdasarkan bobot lintasan aktual yang paling kecil dari titik awal.
+    \item \textbf{\textit{Breadth-First Search} (BFS):} Melakukan ekspansi level demi level (menggunakan antrean FIFO). Optimal hanya jika seluruh bobot sisi bernilai sama (atau jika mencari jumlah pergerakan terminimum).
+    \item \textbf{A* (\textit{A-Star}):} Algoritma hibrida yang menggabungkan biaya aktual dari asal dan estimasi biaya ke tujuan. A* menggunakan senarai prioritas dan dijamin optimal jika estimasi tidak pernah melebih-lebihkan biaya aslinya \cite{Munir2}.
+\end{itemize}
+
+\subsection{Fungsi Heuristik}
+Fungsi heuristik, disimbolkan dengan $h(n)$, merupakan tebakan matematis terukur mengenai sisa biaya dari status $n$ ke status tujuan. Heuristik dimanfaatkan sebagai fungsi pandu untuk memotong ruang pencarian agar algoritma tidak menelusuri simpul yang tidak relevan. Heuristik yang baik harus bersifat \textit{admissible} (dapat diterima) agar solusi akhir dijamin optimal.
+
+% ================= BAB III =================
+\section{IMPLEMENTASI ALGORITMA}
+
+\subsection{Penjelasan Algoritma}
+Pencarian rute dilakukan dengan langkah-langkah sistematis sebagai berikut:
+\begin{enumerate}[noitemsep]
+    \item \textbf{Inisialisasi:} Status awal didefinisikan sebagai $(X_z, Y_z, \text{index}_{cp}=0)$. Masukkan status ini ke dalam senarai prioritas dengan status belum dikunjungi.
+    \item \textbf{Ekstraksi Simpul:} Ambil status dengan prioritas tertinggi. Jika algoritma A*, kriteria prioritas adalah $f(n)$ terkecil. Tandai status ini sebagai telah divisitasi.
+    \item \textbf{Pemeriksaan Tujuan:} Jika aktor berada di \texttt{O} dan semua \textit{checkpoint} telah terkumpul, kembalikan lintasan dan hentikan pencarian.
+    \item \textbf{Pembangkitan Suksesor (Mekanika Meluncur):}
+    \begin{itemize}[noitemsep]
+        \item Untuk setiap arah (Atas, Bawah, Kiri, Kanan), gerakkan aktor ubin demi ubin.
+        \item Evaluasi ubin di depan. Jika berupa dinding, luar papan, atau \textit{checkpoint} dengan indeks yang lebih besar dari target, hentikan luncuran tepat di ubin saat ini.
+        \item Jika lintasan mengenai lava (\texttt{L}), abaikan suksesor ini (tidak valid).
+        \item Jika berhenti tepat di posisi awal sebelum meluncur, abaikan suksesor ini.
+    \end{itemize}
+    \item \textbf{Evaluasi Biaya:} Hitung akumulasi biaya ubin lantai yang dilintasi selama luncuran sebagai bobot langkah.
+    \item \textbf{Pembaruan Senarai:} Masukkan status suksesor ke senarai prioritas untuk diekspansi pada siklus berikutnya. Ulangi ke langkah 2.
+\end{enumerate}
+
+\subsection{Analisis Teoritis}
+
+\subsubsection{Definisi $f(n)$ dan $g(n)$}
+Dalam penyusunan algoritma pencarian di atas:
+\begin{itemize}[noitemsep]
+    \item $g(n)$: Biaya lintasan nyata berupa akumulasi beban ubin dari posisi awal ke simpul $n$. Pada awal permainan, $g(start) = 0$.
+    \item $h(n)$: Estimasi sisa biaya dari simpul $n$ menuju target selanjutnya (\textit{checkpoint} berikutnya atau tujuan \texttt{O}).
+    \item $f(n)$: Nilai evaluasi gabungan penentu prioritas antrean. Pada A*, $f(n) = g(n) + h(n)$. Pada UCS, $f(n) = g(n)$. Pada GBFS, $f(n) = h(n)$.
+\end{itemize}
+
+\subsubsection{Analisis Admissibility Heuristik}
+Sebuah heuristik $h(n)$ dinyatakan \textit{admissible} jika dipastikan $h(n) \leq h^*(n)$, dengan $h^*(n)$ adalah biaya murni/aktual ke tujuan.
+Dalam implementasi ini, dibuat 3 tingkat heuristik:
+\begin{enumerate}[noitemsep]
+    \item \textbf{H1 (Jarak Manhattan):} Jarak geometris ke target dikalikan dengan bobot ubin paling murah di peta. Karena rute aktual pasti membutuhkan minimal sejumlah ubin tersebut dan tidak mungkin berbiaya di bawah harga ubin termurah, H1 mutlak \textit{admissible}.
+    \item \textbf{H2 (\textit{Minimum Slide}):} Simulasi BFS ringan untuk mengetahui jumlah minimal aksi tarikan meluncur ke target. Jumlah tarikan dikali bobot ubin termurah tidak mungkin melebihi biaya lintasan aslinya.
+    \item \textbf{H3 (Dijkstra Lokal):} Simulasi jalur ke target "selanjutnya" menggunakan aturan gerak penuh. Mengingat H3 hanya menghitung ke \textit{checkpoint} terdekat (bukan tujuan akhir keseluruhan permainan), nilainya dipastikan selalu $\leq$ rute total aslinya.
+\end{enumerate}
+
+\subsubsection{Perbandingan Algoritma (Secara Teori)}
+\begin{table}[H]
+\centering
+\begin{tabular}{p{2cm} p{3.5cm} c p{6cm}}
+\toprule
+\textbf{Algoritma} & \textbf{Fungsi Evaluasi} & \textbf{Optimal?} & \textbf{Catatan} \\
+\midrule
+UCS  & $f(n) = g(n)$ & Ya & Berperilaku layaknya pencarian buta berdasar biaya.\\
+BFS  & $f(n) = \text{Kedalaman}$ & Tidak & Optimal untuk jumlah gerak, bukan untuk jumlah biaya.\\
+GBFS & $f(n) = h(n)$ & Tidak & Cepat memotong ekspansi simpul, tetapi sering terjebak rute mahal.\\
+A*   & $f(n) = g(n) + h(n)$ & Ya & Efisien asalkan heuristiknya kuat (seperti H3).\\
+IDA* & $f(n) \leq \text{Threshold}$ & Ya & Kompleksitas memori rendah ($O(d)$), tapi redundansi komputasi besar \cite{Korf}.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ================= BAB IV =================
+\section{HASIL DAN ANALISIS PERCOBAAN}
+
+\subsection{Lingkungan Implementasi}
+Perangkat lunak dibangun menggunakan lingkungan berikut:
+\begin{itemize}[noitemsep]
+    \item \textbf{Bahasa Pemrograman:} Go (\textit{Golang}) versi 1.26.1 untuk mesin utama (\textit{backend}) pemrosesan algoritma.
+    \item \textbf{Lingkungan Web (\textit{Frontend}):} HTML5, CSS3, dan \textit{Vanilla} JavaScript untuk pembangunan antarmuka visual (GUI).
+    \item \textbf{Komunikasi:} Representasi data memanfaatkan arsitektur \textit{REST API} lokal (format JSON).
+\end{itemize}
+
+\subsection{Dokumentasi Uji Coba}
+
+\subsubsection{Testcase 1 (7$\times$7)}
+
+\screenshotfig{Uji Coba/testcase1_UCS.png}{Testcase 1 dengan UCS --- total biaya 87, 8 langkah, 11 iterasi.}
+
+\screenshotfig{Uji Coba/testcase1_GBFS_H1.png}{Testcase 1 dengan GBFS-H1 --- total biaya 87, 8 langkah, 9 iterasi. Lebih sedikit iterasi dibanding UCS berkat panduan heuristik.}
+
+\screenshotfig{Uji Coba/testcase_1_Astar_H1.png}{Testcase 1 dengan A*-H1 --- total biaya 87, 8 langkah, 11 iterasi. Solusi optimal sama dengan UCS.}
+
+\screenshotfig{Uji Coba/testcase1_IDAstar_H1.png}{Testcase 1 dengan IDA*-H1 --- total biaya 87, 8 langkah, 65 iterasi. Redundansi komputasi DFS berulang terlihat jelas dibanding A*.}
+
+\subsubsection{Testcase 2 (7$\times$7)}
+
+\screenshotfig{Uji Coba/testcase2_GBFS_H1.png}{Testcase 2 dengan GBFS-H1 --- total biaya 67, 4 langkah, 5 iterasi. GBFS menemukan rute dengan langkah paling sedikit secara kebetulan pada puzzle kecil ini.}
+
+\screenshotfig{Uji Coba/testcase2_GBFS_H2.png}{Testcase 2 dengan GBFS-H2 --- total biaya 99, 6 langkah, 9 iterasi. Heuristik H2 menghasilkan rute lebih mahal; GBFS tidak menjamin optimal.}
+
+\screenshotfig{Uji Coba/testcase_2_GBFS_H3.png}{Testcase 2 dengan GBFS-H3 --- total biaya 95, 7 langkah, 10 iterasi. H3 menghasilkan estimasi lebih akurat dari H2 sehingga biaya sedikit lebih rendah.}
+
+\screenshotfig{Uji Coba/testcase2_Astar_H1.png}{Testcase 2 dengan A*-H1 --- total biaya 63, 5 langkah, 17 iterasi. A* menemukan solusi optimal.}
+
+\screenshotfig{Uji Coba/testcase2_Astar_H3.png}{Testcase 2 dengan A*-H3 --- total biaya 63, 5 langkah, 14 iterasi. Iterasi lebih sedikit dari A*-H1 karena estimasi H3 lebih ketat.}
+
+\subsubsection{Testcase 5 (10$\times$10)}
+
+\screenshotfig{Uji Coba/testcase5_IDAstart_H1.png}{Testcase 5 dengan IDA*-H1 --- total biaya 191, 7 langkah, durasi 9 ms. Iterasi jauh lebih banyak dibanding A* akibat ekspansi DFS berulang, namun tetap menemukan solusi optimal.}
+
+\subsubsection{Testcase 9 (30$\times$30)}
+
+\screenshotfig{Uji Coba/testcase9_UCS.png}{Testcase 9 dengan UCS --- total biaya 1149, 33 langkah, 311 iterasi. Optimal namun mengekspansi banyak simpul tanpa panduan heuristik.}
+
+\screenshotfig{Uji Coba/testcase9_bfs.png}{Testcase 9 dengan BFS --- total biaya 1158, 26 langkah, 302 iterasi. BFS menemukan rute dengan jumlah langkah paling sedikit, tetapi biayanya tidak optimal.}
+
+\screenshotfig{Uji Coba/testcase9_GBFS_H1.png}{Testcase 9 dengan GBFS-H1 --- total biaya 1815, 40 langkah, 55 iterasi. Ekspansi paling sedikit, namun menghasilkan rute yang jauh dari optimal ($+$57,9\% dari biaya minimum).}
+
+\screenshotfig{Uji Coba/testcase9_Astar_H1.png}{Testcase 9 dengan A*-H1 --- total biaya 1149, 33 langkah, 306 iterasi. Solusi optimal sama dengan UCS, dengan iterasi hampir setara karena H1 tidak terlalu memotong ruang pencarian pada peta besar.}
+
+\subsection{Tabel Hasil Percobaan}
+
+\begin{longtable}{lllrrrr}
+\caption{Ringkasan hasil percobaan lintas algoritma (heuristik H2 untuk algoritma informed).}\\
+\toprule
+\textbf{Testcase} & \textbf{Algoritma} & \textbf{Found} & \textbf{Cost} & \textbf{Move} & \textbf{Iter} & \textbf{ms} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Testcase} & \textbf{Algoritma} & \textbf{Found} & \textbf{Cost} & \textbf{Move} & \textbf{Iter} & \textbf{ms} \\
+\midrule
+\endhead
+testcase1 (7$\times$7)    & UCS     & Ya    &   87 &  8 &  11 & 0 \\
+testcase1                 & BFS     & Ya    &   87 &  8 &  13 & 0 \\
+testcase1                 & GBFS-H2 & Ya    &   87 &  8 &  10 & 0 \\
+testcase1                 & A*-H2   & Ya    &   87 &  8 &  11 & 0 \\
+\midrule
+testcase2 (7$\times$7)    & UCS     & Ya    &   63 &  5 &  17 & 0 \\
+testcase2                 & BFS     & Ya    &   67 &  4 &  13 & 0 \\
+testcase2                 & GBFS-H2 & Ya    &   99 &  6 &   9 & 0 \\
+testcase2                 & A*-H2   & Ya    &   63 &  5 &  17 & 0 \\
+\midrule
+testcase5 (10$\times$10)  & UCS     & Ya    &  191 &  7 &  22 & 0 \\
+testcase5                 & BFS     & Ya    &  191 &  7 &  22 & 0 \\
+testcase5                 & GBFS-H2 & Ya    &  200 &  8 &  13 & 0 \\
+testcase5                 & A*-H2   & Ya    &  191 &  7 &  22 & 0 \\
+\midrule
+testcase6 (10$\times$10)  & UCS     & Ya    &  217 & 14 &  93 & 0 \\
+testcase6                 & BFS     & Ya    &  218 & 13 &  89 & 0 \\
+testcase6                 & GBFS-H2 & Ya    &  233 & 14 &  25 & 1 \\
+testcase6                 & A*-H2   & Ya    &  217 & 14 &  54 & 1 \\
+\midrule
+testcase8 (10$\times$10)  & UCS     & Ya    &  767 & 22 & 284 & 0 \\
+testcase8                 & BFS     & Ya    &  767 & 22 & 213 & 1 \\
+testcase8                 & GBFS-H2 & Ya    &  767 & 22 &  91 & 2 \\
+testcase8                 & A*-H2   & Ya    &  767 & 22 & 281 & 11 \\
+\midrule
+testcase9 (30$\times$30)  & UCS     & Ya    & 1149 & 33 & 311 & 1 \\
+testcase9                 & BFS     & Ya    & 1158 & 26 & 302 & 0 \\
+testcase9                 & GBFS-H2 & Ya    & 1279 & 28 &  72 & 3 \\
+testcase9                 & A*-H2   & Ya    & 1149 & 33 & 240 & 14 \\
+\midrule
+testcase10 (10$\times$10) & UCS     & Tidak &    0 &  0 &  14 & 0 \\
+testcase10                & A*-H2   & Tidak &    0 &  0 &  14 & 0 \\
+\bottomrule
+\end{longtable}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Testcase} & \textbf{Algoritma} & \textbf{Cost} & \textbf{Move} & \textbf{Iter} & \textbf{ms} \\
+\midrule
+testcase6 & GBFS-H1 & 217  & 14 &  15 & 0 \\
+testcase6 & GBFS-H2 & 233  & 14 &  25 & 0 \\
+testcase6 & GBFS-H3 & 217  & 14 &  30 & 1 \\
+testcase6 & A*-H1   & 217  & 14 &  90 & 0 \\
+testcase6 & A*-H2   & 217  & 14 &  54 & 1 \\
+testcase6 & A*-H3   & 217  & 14 &  30 & 0 \\
+\midrule
+testcase9 & GBFS-H1 & 1815 & 40 &  55 & 0 \\
+testcase9 & GBFS-H2 & 1279 & 28 &  72 & 3 \\
+testcase9 & GBFS-H3 & 1357 & 37 &  74 & 4 \\
+testcase9 & A*-H1   & 1149 & 33 & 306 & 0 \\
+testcase9 & A*-H2   & 1149 & 33 & 240 & 15 \\
+testcase9 & A*-H3   & 1149 & 33 & 149 & 7 \\
+\bottomrule
+\end{tabular}
+\caption{Perbandingan ketiga heuristik pada GBFS dan A* untuk dua testcase representatif.}
+\end{table}
+
+\subsection{Analisis Hasil}
+Dari rangkaian pengujian di atas, terlihat beberapa pola yang konsisten:
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Optimalitas cost.} UCS dan A* selalu menghasilkan cost minimum pada seluruh testcase yang punya solusi. BFS menghasilkan jumlah gerak terkecil, tetapi costnya bisa lebih besar---pada testcase6 misalnya, BFS menemukan solusi 13 gerak dengan cost 218, sementara UCS butuh 14 gerak untuk cost yang lebih kecil, yakni 217.
+    \item \textbf{Efisiensi ekspansi.} GBFS secara konsisten menjelajahi simpul paling sedikit. Pada peta besar 30$\times$30 (testcase9), GBFS-H2 hanya butuh 74 iterasi dibanding 311 pada UCS. Trade-off-nya, GBFS-H2 menghasilkan cost 1385---lebih besar 5,5\% dari optimal.
+    \item \textbf{Pengaruh kualitas heuristik pada A*.} H3 menghasilkan iterasi paling sedikit (149) karena estimasinya paling ketat. Meski overhead per-node lebih tinggi akibat Dijkstra internal, total waktu eksekusi A*-H3 (26 ms) tetap lebih cepat dari A*-H2 (31 ms) pada testcase9 berkat penghematan iterasinya.
+    \item \textbf{Kasus tanpa solusi.} Testcase10 memiliki goal yang terkepung lava. Semua algoritma mengeksplorasi tepat 14 simpul yang dapat dijangkau sebelum ruang pencarian habis, membuktikan implementasi menangani kasus ini dengan benar.
+\end{enumerate}
+
+% ================= BAB V =================
+\section{SOURCE PROGRAM}
+
+\subsection{Algoritma Pencarian Rute (Pathfinding)}
+
+Semua algoritma berbagi struktur \texttt{SearchNode} yang menyimpan state saat ini, biaya jalur $g(n)$, nilai evaluasi $f(n)$, serta riwayat gerak. Priority queue diimplementasikan sebagai min-heap kustom agar pemilihan simpul prioritas tertinggi berjalan dalam $O(\log n)$.
+
+Berikut adalah implementasi A* sebagai contoh utama. GBFS hanya berbeda pada baris perhitungan \texttt{FCost} (diganti dengan nilai $h$ saja), sedangkan UCS menetapkan \texttt{FCost = GCost}.
+
+\begin{lstlisting}[language=Go]
+func AStar(puzzle *engine.Puzzle, heuristic HeuristicFunc) (*SolveResult, error) {
+    start := time.Now()
+    initialState := puzzle.InitialState()
+
+    h0, err := heuristic(puzzle, initialState)
+    if err != nil {
+        return nil, err
+    }
+
+    frontier := &MinHeap{}
+    frontier.Push(&SearchNode{
+        State: initialState, GCost: 0, FCost: h0,
+        Moves: []string{}, Slides: []engine.SlideResult{},
+    })
+
+    visited := map[engine.State]bool{}
+    iterations := 0
+
+    for !frontier.IsEmpty() {
+        current := frontier.Pop()
+        if visited[current.State] {
+            continue
+        }
+        visited[current.State] = true
+        iterations++
+
+        if puzzle.IsGoalState(current.State) {
+            return buildResult(current, iterations, time.Since(start)), nil
+        }
+
+        for _, dir := range searchDirections {
+            slide, ok, err := puzzle.Slide(current.State, dir)
+            if err != nil {
+                return nil, err
+            }
+            if !ok || visited[slide.NextState] {
+                continue
+            }
+            nextG := current.GCost + slide.PathCost
+            nextH, err := heuristic(puzzle, slide.NextState)
+            if err != nil {
+                return nil, err
+            }
+            frontier.Push(&SearchNode{
+                State:  slide.NextState,
+                GCost:  nextG,
+                FCost:  nextG + nextH,
+                Moves:  appendMove(current.Moves, dir),
+                Slides: appendSlide(current.Slides, slide),
+            })
+        }
+    }
+    return notFound(iterations, time.Since(start)), nil
+}
+\end{lstlisting}
+
+Algoritma bonus IDA* menggunakan DFS berulang dengan threshold pada nilai $f(n)$. Berikut fungsi rekursifnya:
+
+\begin{lstlisting}[language=Go]
+func idaStarDFS(
+    puzzle *engine.Puzzle, state engine.State,
+    gCost, threshold int, heuristic HeuristicFunc,
+    pathVisited map[engine.State]bool,
+    moves []string, slides []engine.SlideResult,
+) (*SolveResult, int, int, error) {
+    h, err := heuristic(puzzle, state)
+    if err != nil {
+        return nil, 0, 0, err
+    }
+    fCost := gCost + h
+    if fCost > threshold {
+        return nil, fCost, 0, nil
+    }
+    if puzzle.IsGoalState(state) {
+        return &SolveResult{
+            Found: true, Moves: moves,
+            Slides: slides, TotalCost: gCost,
+        }, 0, 1, nil
+    }
+
+    minNext := unreachableHeuristic
+    iterCount := 1
+
+    for _, dir := range searchDirections {
+        slide, ok, err := puzzle.Slide(state, dir)
+        if err != nil {
+            return nil, 0, iterCount, err
+        }
+        if !ok || pathVisited[slide.NextState] {
+            continue
+        }
+        pathVisited[slide.NextState] = true
+        childResult, childNext, childIter, err := idaStarDFS(
+            puzzle, slide.NextState, gCost+slide.PathCost, threshold,
+            heuristic, pathVisited,
+            appendMove(moves, dir), appendSlide(slides, slide),
+        )
+        iterCount += childIter
+        pathVisited[slide.NextState] = false
+        if err != nil {
+            return nil, 0, iterCount, err
+        }
+        if childResult != nil {
+            return childResult, 0, iterCount, nil
+        }
+        if childNext < minNext {
+            minNext = childNext
+        }
+    }
+    return nil, minNext, iterCount, nil
+}
+\end{lstlisting}
+
+\subsection{Fungsi Heuristik}
+
+Ketiga heuristik menggunakan antarmuka fungsi \texttt{HeuristicFunc} yang sama sehingga dapat dipakai secara seragam oleh A*, GBFS, dan IDA*.
+
+\textbf{H1 --- Jarak Manhattan:}
+
+\begin{lstlisting}[language=Go]
+func HeuristicManhattan(puzzle *engine.Puzzle, state engine.State) (int, error) {
+    if err := validateHeuristicInput(puzzle, state); err != nil {
+        return 0, err
+    }
+    current := state.Actor
+    total := 0
+    for idx := state.NextCheckpoint; idx < puzzle.CheckpointCount(); idx++ {
+        target := puzzle.CheckpointOrder[idx]
+        total += manhattanDistance(current, target)
+        current = target
+    }
+    total += manhattanDistance(current, puzzle.Goal)
+    return total * puzzle.MinWalkableCost, nil
+}
+\end{lstlisting}
+
+\textbf{H2 --- Minimum Slide (BFS ringan ke target berikutnya):}
+
+\begin{lstlisting}[language=Go]
+func HeuristicMinimumSlide(puzzle *engine.Puzzle, state engine.State) (int, error) {
+    if err := validateHeuristicInput(puzzle, state); err != nil {
+        return 0, err
+    }
+    if targetSatisfied(puzzle, state, state) {
+        return 0, nil
+    }
+    type bfsNode struct {
+        state engine.State
+        depth int
+    }
+    queue := []bfsNode{{state: state, depth: 0}}
+    visited := map[engine.State]struct{}{state: {}}
+    for len(queue) > 0 {
+        current := queue[0]
+        queue = queue[1:]
+        for _, direction := range heuristicDirections {
+            result, ok, err := puzzle.Slide(current.state, direction)
+            if err != nil {
+                return 0, err
+            }
+            if !ok {
+                continue
+            }
+            nextState := result.NextState
+            if targetSatisfied(puzzle, state, nextState) {
+                return (current.depth + 1) * puzzle.MinWalkableCost, nil
+            }
+            if _, exists := visited[nextState]; exists {
+                continue
+            }
+            visited[nextState] = struct{}{}
+            queue = append(queue, bfsNode{state: nextState, depth: current.depth + 1})
+        }
+    }
+    return unreachableHeuristic, nil
+}
+\end{lstlisting}
+
+\textbf{H3 --- Dijkstra Lokal ke target berikutnya} menggunakan priority queue dan menyimpan hasilnya ke dalam cache per-puzzle agar tidak dihitung ulang untuk state yang sama. Implementasi lengkapnya tersedia di \texttt{src/backend/algorithm/heuristic.go}.
+
+% ================= BAB VI =================
+\section{PENUTUP}
+
+\subsection{Kesimpulan}
+Pemodelan permasalahan \textit{Ice Sliding Puzzle} telah berhasil ditranslasikan ke dalam struktur pencarian berbasis ruang status yang memperhitungkan mekanika pergerakan tidak terinterupsi, biaya traversal, lava, dan urutan \textit{checkpoint}. Dari segi instrumen algoritma, A* menjadi pilihan yang paling seimbang karena tetap mempertimbangkan biaya aktual seperti UCS, tetapi juga diarahkan oleh heuristik $h(n)$ yang \textit{admissible}.
+
+Berdasarkan hasil percobaan, UCS dan A* mampu menghasilkan solusi dengan cost optimal pada kasus yang diuji, sedangkan GBFS cenderung lebih sedikit melakukan ekspansi namun tidak selalu memberikan cost terbaik. BFS berguna sebagai pembanding jumlah langkah, tetapi kurang tepat dijadikan acuan optimalitas ketika tiap tile memiliki bobot berbeda. GUI yang dibuat juga membantu proses validasi karena input, output, statistik pencarian, dan visualisasi langkah dapat diamati secara langsung.
+
+\subsection{Saran}
+Berdasarkan hasil eksperimen, metode penyimpanan \textit{cache} terdistribusi dapat ditambahkan agar evaluasi fungsi heuristik yang repetitif, seperti H3, dapat berjalan lebih singkat pada matriks peta berskala besar. Selain itu, program dapat dikembangkan dengan pilihan kecepatan playback yang lebih fleksibel, tampilan perbandingan algoritma secara berdampingan, serta optimasi struktur data agar pencarian pada papan besar dapat berjalan lebih stabil.
+
+% ================= DAFTAR PUSTAKA =================
+\newpage
+\renewcommand{\refname}{DAFTAR PUSTAKA}
+\begin{thebibliography}{9}
+
+\bibitem{Munir1} 
+R. Munir, ``Penentuan rute (Route/Path Planning) - Bagian 1,'' Program Studi Teknik Informatika, Sekolah Teknik Elektro dan Informatika, Institut Teknologi Bandung, 2026. [Daring]. Tersedia: \url{https://informatika.stei.itb.ac.id/~rinaldi.munir/Stmik/2025-2026/stima25-26.html}
+
+\bibitem{Munir2} 
+R. Munir, ``Penentuan rute (Route/Path Planning) - Bagian 2,'' Program Studi Teknik Informatika, Sekolah Teknik Elektro dan Informatika, Institut Teknologi Bandung, 2026. [Daring]. Tersedia: \url{https://informatika.stei.itb.ac.id/~rinaldi.munir/Stmik/2025-2026/stima25-26.html}
+
+\bibitem{Korf} 
+R. E. Korf, ``Depth-first iterative-deepening: An optimal admissible tree search,'' \textit{Artificial Intelligence}, vol. 27, no. 1, pp. 97--109, 1985. [Daring]. Tersedia: \url{https://doi.org/10.1016/0004-3702(85)90084-0}
+
+\end{thebibliography}
+
+% ================= LAMPIRAN =================
+\newpage
+\section*{LAMPIRAN}
+\addcontentsline{toc}{section}{LAMPIRAN}
+
+\textbf{Pranala GitHub Repository:} \\
+\url{https://github.com/Sakazu01/Tucil3_13524085_13524090}
+
+\subsection*{Checklist Pemenuhan Spesifikasi}
+\addcontentsline{toc}{subsection}{Checklist Pemenuhan Spesifikasi}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{8pt}
+\begin{tabularx}{0.95\textwidth}{|>{\centering\arraybackslash}p{0.8cm}|Y|>{\centering\arraybackslash}p{1.7cm}|>{\centering\arraybackslash}p{1.7cm}|}
+\hline
+\textbf{No} & \centering\arraybackslash\textbf{Poin} & \textbf{Ya} & \textbf{Tidak} \\
+\hline
+1 & Program berhasil dikompilasi tanpa kesalahan. & \(\checkmark\) & \\
+\hline
+2 & Program berhasil dijalankan. & \(\checkmark\) & \\
+\hline
+3 & Solusi yang diberikan program benar dan mematuhi aturan permainan. & \(\checkmark\) & \\
+\hline
+4 & Program dapat membaca masukan berkas \texttt{.txt} serta menyimpan solusi dalam berkas \texttt{.txt}. & \(\checkmark\) & \\
+\hline
+5 & Program memiliki Graphical User Interface (GUI). & \(\checkmark\) & \\
+\hline
+6 & Ada algoritma \textit{pathfinding} alternatif selain dari spesifikasi wajib, yaitu BFS dan IDA*. & \(\checkmark\) & \\
+\hline
+7 & Ada tambahan dua alternatif heuristik selain yang utama, yaitu H2 Minimum Slide dan H3 Dijkstra. & \(\checkmark\) & \\
+\hline
+\end{tabularx}
+\caption{Checklist pemenuhan spesifikasi tugas kecil.}
+\end{table}
+
+\subsection*{Pernyataan Tidak Melakukan Kecurangan}
+\addcontentsline{toc}{subsection}{Pernyataan Tidak Melakukan Kecurangan}
+
+\noindent\fbox{%
+  \begin{minipage}{0.95\textwidth}
+    Tugas ini disusun sepenuhnya tanpa bantuan kecerdasan buatan (\textit{Generative AI}), melainkan hasil pemikiran dan analisis mandiri.
+
+    \vspace{1.2cm}
+    \begin{tabularx}{\textwidth}{>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+      \includegraphics[height=1.35cm]{ttdAriel.jpeg} &
+      \includegraphics[height=1.35cm]{ttdAkram.png} \\
+      \rule{0.36\textwidth}{0.4pt} & \rule{0.36\textwidth}{0.4pt} \\
+      Ariel Cornelius Sitorus & Nashiruddin Akram \\
+      13524085 & 13524090 \\
+    \end{tabularx}
+  \end{minipage}
+}
+
+\end{document}

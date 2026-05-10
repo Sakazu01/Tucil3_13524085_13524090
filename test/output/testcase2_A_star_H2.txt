@@ -1,0 +1,9 @@
+﻿Testcase  : testcase2.txt
+Algorithm : A* (H2)
+Heuristik : H2
+Found     : true
+Moves     : DLRUR
+MoveCount : 5
+TotalCost : 63
+Iterations: 17
+Duration  : 0 ms

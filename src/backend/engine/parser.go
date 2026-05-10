@@ -1,4 +1,4 @@
-package solver
+package engine
 
 import (
 	"bufio"
@@ -7,55 +7,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-const (
-	TileStart = "Z"
-	TileGoal  = "O"
-	TileWall  = "X"
-	TileLava  = "L"
-	TileFloor = "*"
-)
-
-var floorTokens = map[string]struct{}{
-	"*": {},
-	".": {},
-	"-": {},
-	"_": {},
-}
-
-type Position struct {
-	Row int
-	Col int
-}
-
-func (p Position) Add(other Position) Position {
-	return Position{
-		Row: p.Row + other.Row,
-		Col: p.Col + other.Col,
-	}
-}
-
-func (p Position) String() string {
-	return fmt.Sprintf("(%d,%d)", p.Row, p.Col)
-}
-
-type State struct {
-	Actor          Position
-	NextCheckpoint int
-}
-
-type Puzzle struct {
-	Rows            int
-	Cols            int
-	Board           [][]string
-	Costs           [][]int
-	Start           Position
-	Goal            Position
-	Checkpoints     map[int]Position
-	CheckpointOrder []Position
-	MaxCheckpoint   int
-	MinWalkableCost int
-}
 
 func LoadPuzzleFromFile(path string) (*Puzzle, error) {
 	file, err := os.Open(path)
@@ -67,15 +18,13 @@ func LoadPuzzleFromFile(path string) (*Puzzle, error) {
 	scanner := bufio.NewScanner(file)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
-	lines := make([]string, 0)
+	var lines []string
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" {
-			continue
+		if line != "" {
+			lines = append(lines, line)
 		}
-		lines = append(lines, line)
 	}
-
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("gagal membaca file: %w", err)
 	}
@@ -93,27 +42,25 @@ func ParsePuzzleLines(lines []string) (*Puzzle, error) {
 		return nil, err
 	}
 
-	expectedLineCount := 1 + rows + rows
-	if len(lines) != expectedLineCount {
-		return nil, fmt.Errorf("jumlah baris input tidak valid: expected %d, got %d", expectedLineCount, len(lines))
+	expected := 1 + rows + rows
+	if len(lines) != expected {
+		return nil, fmt.Errorf("jumlah baris input tidak valid: expected %d, got %d", expected, len(lines))
 	}
 
 	board := make([][]string, rows)
 	for row := 0; row < rows; row++ {
-		parsedRow, err := parseBoardLine(lines[1+row], cols)
+		board[row], err = parseBoardLine(lines[1+row], cols)
 		if err != nil {
-			return nil, fmt.Errorf("board row %d: %w", row+1, err)
+			return nil, fmt.Errorf("board baris %d: %w", row+1, err)
 		}
-		board[row] = parsedRow
 	}
 
 	costs := make([][]int, rows)
 	for row := 0; row < rows; row++ {
-		parsedRow, err := parseCostLine(lines[1+rows+row], cols)
+		costs[row], err = parseCostLine(lines[1+rows+row], cols)
 		if err != nil {
-			return nil, fmt.Errorf("cost row %d: %w", row+1, err)
+			return nil, fmt.Errorf("cost baris %d: %w", row+1, err)
 		}
-		costs[row] = parsedRow
 	}
 
 	puzzle := &Puzzle{
@@ -134,15 +81,14 @@ func ParsePuzzleLines(lines []string) (*Puzzle, error) {
 }
 
 func (p *Puzzle) validateAndIndex() error {
-	startCount := 0
-	goalCount := 0
+	startCount, goalCount := 0, 0
 
 	for row := 0; row < p.Rows; row++ {
 		if len(p.Board[row]) != p.Cols {
-			return fmt.Errorf("panjang board row %d tidak konsisten", row+1)
+			return fmt.Errorf("panjang board baris %d tidak konsisten", row+1)
 		}
 		if len(p.Costs[row]) != p.Cols {
-			return fmt.Errorf("panjang cost row %d tidak konsisten", row+1)
+			return fmt.Errorf("panjang cost baris %d tidak konsisten", row+1)
 		}
 
 		for col := 0; col < p.Cols; col++ {
@@ -163,21 +109,18 @@ func (p *Puzzle) validateAndIndex() error {
 				p.Goal = pos
 			}
 
-			checkpoint, isCheckpoint := parseCheckpointToken(token)
-			if isCheckpoint {
-				if _, exists := p.Checkpoints[checkpoint]; exists {
-					return fmt.Errorf("checkpoint %d muncul lebih dari sekali", checkpoint)
+			if idx, ok := parseCheckpointToken(token); ok {
+				if _, exists := p.Checkpoints[idx]; exists {
+					return fmt.Errorf("checkpoint %d muncul lebih dari sekali", idx)
 				}
-				p.Checkpoints[checkpoint] = pos
-				if checkpoint > p.MaxCheckpoint {
-					p.MaxCheckpoint = checkpoint
+				p.Checkpoints[idx] = pos
+				if idx > p.MaxCheckpoint {
+					p.MaxCheckpoint = idx
 				}
 			}
 
-			if p.IsWalkableToken(token) {
-				if p.MinWalkableCost == -1 || cost < p.MinWalkableCost {
-					p.MinWalkableCost = cost
-				}
+			if p.IsWalkable(token) && (p.MinWalkableCost == -1 || cost < p.MinWalkableCost) {
+				p.MinWalkableCost = cost
 			}
 		}
 	}
@@ -193,14 +136,10 @@ func (p *Puzzle) validateAndIndex() error {
 	}
 
 	p.CheckpointOrder = make([]Position, 0)
-	if len(p.Checkpoints) == 0 {
-		return nil
-	}
-
-	for checkpoint := 0; checkpoint <= p.MaxCheckpoint; checkpoint++ {
-		pos, exists := p.Checkpoints[checkpoint]
+	for idx := 0; idx <= p.MaxCheckpoint; idx++ {
+		pos, exists := p.Checkpoints[idx]
 		if !exists {
-			return fmt.Errorf("sequence checkpoint tidak lengkap: checkpoint %d hilang", checkpoint)
+			return fmt.Errorf("urutan checkpoint tidak lengkap: checkpoint %d tidak ditemukan", idx)
 		}
 		p.CheckpointOrder = append(p.CheckpointOrder, pos)
 	}
@@ -213,23 +152,20 @@ func parseDimensions(line string) (int, int, error) {
 	if len(fields) != 2 {
 		return 0, 0, fmt.Errorf("baris pertama harus berformat: N M")
 	}
-
 	rows, err := strconv.Atoi(fields[0])
 	if err != nil || rows <= 0 {
 		return 0, 0, fmt.Errorf("N tidak valid: %q", fields[0])
 	}
-
 	cols, err := strconv.Atoi(fields[1])
 	if err != nil || cols <= 0 {
 		return 0, 0, fmt.Errorf("M tidak valid: %q", fields[1])
 	}
-
 	return rows, cols, nil
 }
 
 func parseBoardLine(line string, cols int) ([]string, error) {
 	fields := strings.Fields(line)
-	row := make([]string, 0, cols)
+	var row []string
 
 	switch {
 	case len(fields) == cols:
@@ -262,15 +198,15 @@ func parseCostLine(line string, cols int) ([]int, error) {
 	}
 
 	row := make([]int, cols)
-	for idx, field := range fields {
-		value, err := strconv.Atoi(field)
+	for i, field := range fields {
+		v, err := strconv.Atoi(field)
 		if err != nil {
-			return nil, fmt.Errorf("cost pada kolom %d tidak valid: %q", idx+1, field)
+			return nil, fmt.Errorf("cost pada kolom %d tidak valid: %q", i+1, field)
 		}
-		if value < 0 {
-			return nil, fmt.Errorf("cost pada kolom %d tidak boleh negatif", idx+1)
+		if v < 0 {
+			return nil, fmt.Errorf("cost pada kolom %d tidak boleh negatif", i+1)
 		}
-		row[idx] = value
+		row[i] = v
 	}
 
 	return row, nil
@@ -281,11 +217,9 @@ func isAllowedBoardToken(token string) bool {
 	case TileStart, TileGoal, TileWall, TileLava:
 		return true
 	}
-
-	if _, ok := floorTokens[token]; ok {
+	if _, ok := FloorTokens[token]; ok {
 		return true
 	}
-
 	_, ok := parseCheckpointToken(token)
 	return ok
 }
@@ -294,21 +228,17 @@ func parseCheckpointToken(token string) (int, bool) {
 	if token == "" {
 		return 0, false
 	}
-
-	for _, char := range token {
-		if char < '0' || char > '9' {
+	for _, c := range token {
+		if c < '0' || c > '9' {
 			return 0, false
 		}
 	}
-
 	if len(token) > 1 && token[0] == '0' {
 		return 0, false
 	}
-
-	value, err := strconv.Atoi(token)
-	if err != nil || value < 0 {
+	v, err := strconv.Atoi(token)
+	if err != nil || v < 0 {
 		return 0, false
 	}
-
-	return value, true
+	return v, true
 }

@@ -1,0 +1,9 @@
+﻿Testcase  : testcase7.txt
+Algorithm : GBFS (H2)
+Heuristik : H2
+Found     : true
+Moves     : DLDLURLDRDLU
+MoveCount : 12
+TotalCost : 277
+Iterations: 25
+Duration  : 0 ms

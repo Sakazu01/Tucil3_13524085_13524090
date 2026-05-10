@@ -1,0 +1,9 @@
+﻿Testcase  : testcase7.txt
+Algorithm : A* (H2)
+Heuristik : H2
+Found     : true
+Moves     : DLDLURLDRDLU
+MoveCount : 12
+TotalCost : 277
+Iterations: 41
+Duration  : 0 ms

@@ -1,0 +1,9 @@
+﻿Testcase  : testcase4.txt
+Algorithm : UCS
+Heuristik : 
+Found     : true
+Moves     : URDLDRDRULU
+MoveCount : 11
+TotalCost : 250
+Iterations: 27
+Duration  : 1 ms
