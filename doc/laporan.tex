@@ -14,11 +14,12 @@
 \usepackage{float}
 \usepackage{hyperref}
 \usepackage{xcolor}
-\usepackage{microtype}
+\usepackage[protrusion=true,expansion=false]{microtype}
 \usepackage{listings}
 \usepackage{titlesec}
 \usepackage{tocloft}
 \usepackage[space]{grffile}
+\usepackage{tabularx}
 
 % Translasi penamaan default LaTeX ke Bahasa Indonesia
 \renewcommand{\figurename}{Gambar}
@@ -70,6 +71,8 @@
     \caption{#2}
   \end{figure}
 }
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 
 \begin{document}
 
@@ -530,10 +533,12 @@ func HeuristicMinimumSlide(puzzle *engine.Puzzle, state engine.State) (int, erro
 \section{PENUTUP}
 
 \subsection{Kesimpulan}
-Pemodelan permasalahan \textit{Ice Sliding Puzzle} telah berhasil ditranslasikan ke dalam struktur pencarian berbasis ruang status yang memperhitungkan mekanika pergerakan tidak terinterupsi. Dari segi instrumen algoritma, A* terbukti sebagai solusi paling ideal karena mampu menjamin rute terpendek dengan meminimalisir ekspansi buta layaknya UCS, hal ini didukung oleh penggunaan heuristik $h(n)$ yang kuat dan terbukti \textit{admissible}.
+Pemodelan permasalahan \textit{Ice Sliding Puzzle} telah berhasil ditranslasikan ke dalam struktur pencarian berbasis ruang status yang memperhitungkan mekanika pergerakan tidak terinterupsi, biaya traversal, lava, dan urutan \textit{checkpoint}. Dari segi instrumen algoritma, A* menjadi pilihan yang paling seimbang karena tetap mempertimbangkan biaya aktual seperti UCS, tetapi juga diarahkan oleh heuristik $h(n)$ yang \textit{admissible}.
+
+Berdasarkan hasil percobaan, UCS dan A* mampu menghasilkan solusi dengan cost optimal pada kasus yang diuji, sedangkan GBFS cenderung lebih sedikit melakukan ekspansi namun tidak selalu memberikan cost terbaik. BFS berguna sebagai pembanding jumlah langkah, tetapi kurang tepat dijadikan acuan optimalitas ketika tiap tile memiliki bobot berbeda. GUI yang dibuat juga membantu proses validasi karena input, output, statistik pencarian, dan visualisasi langkah dapat diamati secara langsung.
 
 \subsection{Saran}
-Berdasarkan hasil eksperimen, metode penyimpanan \textit{cache} terdistribusi dapat ditambahkan agar evaluasi fungsi heuristik yang repetitif (seperti fungsi H3) dapat berjalan lebih singkat pada matriks peta berskala masif.
+Berdasarkan hasil eksperimen, metode penyimpanan \textit{cache} terdistribusi dapat ditambahkan agar evaluasi fungsi heuristik yang repetitif, seperti H3, dapat berjalan lebih singkat pada matriks peta berskala besar. Selain itu, program dapat dikembangkan dengan pilihan kecepatan playback yang lebih fleksibel, tampilan perbandingan algoritma secara berdampingan, serta optimasi struktur data agar pencarian pada papan besar dapat berjalan lebih stabil.
 
 % ================= DAFTAR PUSTAKA =================
 \newpage
@@ -559,71 +564,51 @@ R. E. Korf, ``Depth-first iterative-deepening: An optimal admissible tree search
 \textbf{Pranala GitHub Repository:} \\
 \url{https://github.com/Sakazu01/Tucil3_13524085_13524090}
 
-\vspace{1em}
-\textbf{Mekanisme Pembangkitan Suksesor --- fungsi \texttt{Slide} (src/backend/engine/movement.go):}
+\subsection*{Checklist Pemenuhan Spesifikasi}
+\addcontentsline{toc}{subsection}{Checklist Pemenuhan Spesifikasi}
 
-\begin{lstlisting}[language=Go]
-func (p *Puzzle) Slide(state State, direction string) (SlideResult, bool, error) {
-    delta, exists := moveDeltas[direction]
-    if !exists {
-        return SlideResult{}, false, fmt.Errorf("arah tidak valid: %q", direction)
-    }
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.45}
+\setlength{\tabcolsep}{8pt}
+\begin{tabularx}{0.95\textwidth}{|>{\centering\arraybackslash}p{0.8cm}|Y|>{\centering\arraybackslash}p{1.7cm}|>{\centering\arraybackslash}p{1.7cm}|}
+\hline
+\textbf{No} & \centering\arraybackslash\textbf{Poin} & \textbf{Ya} & \textbf{Tidak} \\
+\hline
+1 & Program berhasil dikompilasi tanpa kesalahan. & \(\checkmark\) & \\
+\hline
+2 & Program berhasil dijalankan. & \(\checkmark\) & \\
+\hline
+3 & Solusi yang diberikan program benar dan mematuhi aturan permainan. & \(\checkmark\) & \\
+\hline
+4 & Program dapat membaca masukan berkas \texttt{.txt} serta menyimpan solusi dalam berkas \texttt{.txt}. & \(\checkmark\) & \\
+\hline
+5 & Program memiliki Graphical User Interface (GUI). & \(\checkmark\) & \\
+\hline
+6 & Ada algoritma \textit{pathfinding} alternatif selain dari spesifikasi wajib, yaitu BFS dan IDA*. & \(\checkmark\) & \\
+\hline
+7 & Ada tambahan dua alternatif heuristik selain yang utama, yaitu H2 Minimum Slide dan H3 Dijkstra. & \(\checkmark\) & \\
+\hline
+\end{tabularx}
+\caption{Checklist pemenuhan spesifikasi tugas kecil.}
+\end{table}
 
-    current := state.Actor
-    nextCheckpoint := state.NextCheckpoint
-    path := make([]Position, 0, p.Rows+p.Cols)
-    passedCheckpoints := make([]int, 0, 4)
-    totalCost := 0
-    moved := false
+\subsection*{Pernyataan Tidak Melakukan Kecurangan}
+\addcontentsline{toc}{subsection}{Pernyataan Tidak Melakukan Kecurangan}
 
-    for {
-        next := current.Add(delta)
+\noindent\fbox{%
+  \begin{minipage}{0.95\textwidth}
+    Tugas ini disusun sepenuhnya tanpa bantuan kecerdasan buatan (\textit{Generative AI}), melainkan hasil pemikiran dan analisis mandiri.
 
-        // Batas papan berlaku sama dengan dinding
-        if !p.InBounds(next) {
-            if !moved {
-                return SlideResult{}, false, nil
-            }
-            return p.buildSlideResult(direction, state, current,
-                path, totalCost, passedCheckpoints, nextCheckpoint)
-        }
-
-        token := p.Cell(next)
-
-        if token == TileWall {
-            if !moved {
-                return SlideResult{}, false, nil
-            }
-            return p.buildSlideResult(direction, state, current,
-                path, totalCost, passedCheckpoints, nextCheckpoint)
-        }
-
-        // Lintasan melewati lava selalu ilegal
-        if token == TileLava {
-            return SlideResult{}, false, nil
-        }
-
-        // Checkpoint di luar urutan berlaku sebagai dinding
-        checkpoint, isCheckpoint := parseCheckpointToken(token)
-        if isCheckpoint && checkpoint > nextCheckpoint {
-            if !moved {
-                return SlideResult{}, false, nil
-            }
-            return p.buildSlideResult(direction, state, current,
-                path, totalCost, passedCheckpoints, nextCheckpoint)
-        }
-
-        current = next
-        moved = true
-        path = append(path, current)
-        totalCost += p.CostAt(current)
-
-        if isCheckpoint && checkpoint == nextCheckpoint {
-            passedCheckpoints = append(passedCheckpoints, checkpoint)
-            nextCheckpoint++
-        }
-    }
+    \vspace{1.2cm}
+    \begin{tabularx}{\textwidth}{>{\centering\arraybackslash}X>{\centering\arraybackslash}X}
+      \includegraphics[height=1.35cm]{ttdAriel.jpeg} &
+      \includegraphics[height=1.35cm]{ttdAkram.png} \\
+      \rule{0.36\textwidth}{0.4pt} & \rule{0.36\textwidth}{0.4pt} \\
+      Ariel Cornelius Sitorus & Nashiruddin Akram \\
+      13524085 & 13524090 \\
+    \end{tabularx}
+  \end{minipage}
 }
-\end{lstlisting}
 
 \end{document}
